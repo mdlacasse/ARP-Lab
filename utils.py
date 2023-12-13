@@ -24,6 +24,8 @@ def setVerbose(val):
     '''
     global verbose
     verbose = val
+    # Force the use of the verbose variable through this following call.
+    vprint("Setting verbose to", val)
 
 
 def vprint(*args, **kwargs):

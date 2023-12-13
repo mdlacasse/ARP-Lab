@@ -8,8 +8,8 @@ Values were extracted from NYU's Stern School of business:
 https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html
 
 Rate lists will need to be updated with values for current year.
-When doing so, the 2022 bounds in the rates() class below will
-need to be adjusted to the last current data year.
+When doing so, the TO bound defined below will need to be adjusted
+to the last current data year.
 
 Copyright Martin-D. Lacasse (2023)
 
@@ -20,6 +20,11 @@ Last updated: December 2023
 ###################################################################
 import numpy as np
 import utils as u
+
+# All data goes from 1928 to 2022. Update the TO value when data
+# becomes available for subsequent years.
+FROM = 1928
+TO = 2022
 
 # Annual rate of return (%) of S&P 500 since 1928, including dividends.
 SP500 = [
@@ -164,83 +169,80 @@ def getDistributions(frm, to):
 
     # Check if called direclty by year instead of by index.
     if frm >= 1000:
-        frm -= 1928
-        to = to - 1928 + 1
+        frm -= FROM
+        to = to - FROM + 1
 
     assert (0 <= frm and frm <= len(SP500))
     assert (0 <= to and to <= len(SP500))
     assert (frm <= to)
 
     i = 0
-    u.vprint('Series\t\tMean\t\t\t\tStd-Deviation')
+    u.vprint('Series\t\tMean (%)\t\t\tStd-Deviation (%)')
     for key in series:
         means[i] = np.mean(series[key][frm:to])
         stdDev[i] = np.std(series[key][frm:to])
         u.vprint(key, '  \t', means[i], '\t\t', stdDev[i])
         i += 1
 
-    # Change from percent to decimal.
-    means /= 100.
-    stdDev /= 100.
+    # Convert from percent to decimal
+    means /= 100
+    stdDev /= 100
 
     return means, stdDev
 
 
 class rates:
+    '''
+    Rates are stored in a 4-array in the following order:
+    Stocks, Bonds, Fixed assets, inflation.
+    Rate are stored in decimal, but API is in percent.
+    '''
+
     # Default rates are average over last 30 years.
-    _defRates = [0.11008387, 0.0736, 0.05028387, 0.02513871]
+    _defRates = np.array([0.11008387, 0.0736, 0.05028387, 0.02513871])
+
     def __init__(self):
-        self.stocksRate = self._defRates[0]
-        self.bondsRate = self._defRates[1]
-        self.tBondsRate = self._defRates[2]
-        self.inflationRate = self._defRates[3]
+        self.frm = 0
+        self.to = len(SP500)
+
+        self._myRates = np.array(self._defRates)
+        self._setFixedRates(self._defRates)
 
         # Default values for rates.
         self.method = 'fixed'
+        self._rateMethod = self._fixedRates
 
-    def _fixedRates(self, i, j):
-        '''
-        Return average rates specified through setRatesMethod().
-        If not specified, default average rates are provided.
-        These rates are time-independent, and therefore
-        the 'i' and 'j' arguments are ignored.
-        '''
-        return [self.stocksRate, self.bondsRate,
-                self.tBondsRate, self.inflationRate]
+        self.means = np.zeros((4))
+        self.stdDev = np.zeros((4))
 
-    # Default rate-providing method.
-    _rateMethod = _fixedRates
-
-    frm = 0
-    to = len(SP500)
-
-    means = []
-    stdDev = []
-
-    def setMethod(self, method, frm=None, to=None):
-        if method == None:
+    def setMethod(self, method, frm=FROM, to=TO):
+        if method is None or method == 'default':
             self.method = 'fixed'
-            u.vprint('Using default rates values:', self._defRates)
+            u.vprint('Using default fixed rates values: (%)\n',
+                     100*self._defRates)
             self._setFixedRates(self._defRates)
             return
         elif type(method) == list:
             self.method == 'fixed'
-            u.vprint('Setting rates using fixed values:', method)
+            method = np.array(method)
+            u.vprint('Setting rates using fixed values: (%)\n', method)
+            # Convert percent to decimal.
+            method /= 100
             self._setFixedRates(method)
             return
 
-        assert ((1928 <= frm and frm <= 2022) and
-                (1928 <= to and to <= 2022) and
-                (frm < to))
+        assert (FROM <= frm and frm <= TO)
+        assert (FROM <= to and to <= TO)
+        assert (frm < to)
 
-        self.frm = int(frm - 1928)
-        self.to = int(to - 1928 + 1)
+        self.frm = int(frm - FROM)
+        self.to = int(to - FROM + 1)
 
         if method == 'historical':
-            u.vprint('Setting', method, 'rates using data from', frm, 'to', to)
+            u.vprint('Using', method, 'rates using data from', frm, 'to', to)
             self._rateMethod = self._histRates
         elif method == 'stochastic':
-            u.vprint('Setting', method, 'rates using data from', frm, 'to', to)
+            u.vprint('Using', method, 'rates using data from', frm, 'to', to)
             self._rateMethod = self._stochRates
             self.means, self.stdDev = getDistributions(frm, to)
         else:
@@ -250,10 +252,7 @@ class rates:
 
     def _setFixedRates(self, rates):
         assert len(rates) == 4
-        self.stocksRate = rates[0]
-        self.bondsRate = rates[1]
-        self.tBondsRate = rates[2]
-        self.inflationRate = rates[3]
+        self._myRates = np.array(rates)
 
     def genSeries(self, i, n):
         '''
@@ -286,6 +285,15 @@ class rates:
         assert (0 <= i and 0 <= j)
         return self._rateMethod(i, j)
 
+    def _fixedRates(self, i, j):
+        '''
+        Return average rates set through setRatesMethod().
+        If not specified, default average rates are provided.
+        For fixed rates, values are time-independent, and therefore
+        the 'i' and 'j' arguments are ignored.
+        '''
+        return self._myRates
+
     def _histRates(self, i, j):
         '''
         Return a list of 4 values representing the historical rates
@@ -296,13 +304,14 @@ class rates:
         to start at a different year while cycling though the whole series.
         '''
 
-        hrates = [
+        hrates = np.array([
               SP500[(self.frm+i+j) % (self.to-self.frm)],
               BondsAA[(self.frm+i+j) % (self.to-self.frm)],
               TBonds[(self.frm+i+j) % (self.to-self.frm)],
               Inflation[(self.frm+i+j) % (self.to-self.frm)]
-              ]
-        return hrates
+              ])
+        # Convert from percent to decimal.
+        return hrates/100
 
     def _stochRates(self, i, j):
         '''
@@ -325,11 +334,11 @@ class rates:
 
         '''
 
-        srates = [
+        srates = np.array([
             np.random.normal(self.means[0], self.stdDev[0]),
             np.random.normal(self.means[1], self.stdDev[1]),
             np.random.normal(self.means[2], self.stdDev[2]),
             np.random.normal(self.means[3], self.stdDev[3])
-            ]
+            ])
 
         return srates
