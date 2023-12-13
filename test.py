@@ -23,11 +23,11 @@ plan.interpolateAR('linear')
 # Specify rate of returns for each class of assets.
 # Valid entries are 'historical', 'stochastic', 'default',
 # or a list of fixed average values.
-# myrates = [9.5, 4.04, 3.03, 3.8]
-# plan.setRates(myrates)
+myrates = [6.0, 5.0, 3.0, 3.08]
+plan.setRates(myrates)
 # plan.setRates('default')
 # plan.setRates('historical', 1928, 2022)
-plan.setRates('historical', 1998, 2022)
+# plan.setRates('historical', 1998, 2022)
 # plan.setRates('stochastic', 1928, 2022)
 
 # Enter desired value for net income in retirementi, and spending profile.

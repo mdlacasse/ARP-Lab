@@ -20,8 +20,9 @@ import numpy as np
 import math
 
 # Our own modules:
-import rates
 import utils as u
+import rates
+import tax as tx
 
 ######################################################################
 
@@ -120,6 +121,12 @@ class Plan:
         self.ysource = None
         self.yincome = None
 
+        self.rates = None
+        self.rateMethod = 'default'
+        self.rateFrm = None
+        self.rateTo = None
+        self.setRates('default')
+
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
         Set values of asset distribution in each of the accounts
@@ -181,8 +188,11 @@ class Plan:
         '''
         dr = rates.rates()
         dr.setMethod(method, frm, to)
-        # Beware as some calculations start in 2017
-        self.rates = dr.genSeries(offset, self.maxHorizon+4)
+        self.rateMethod = method
+        self.rateFrm = frm
+        self.rateTo = to
+        # Beware as some inflation calculations cannot start in 2017
+        self.rates = dr.genSeries(offset, self.maxHorizon)
         # u.vprint('Generated rate series of', len(self.rates))
 
     def setAssetBalances(self, *, taxable, taxDeferred, taxFree, beneficiary):
@@ -364,8 +374,8 @@ class Plan:
         if self.y2ages[n][i] < refAge:
             return 0
 
-        return inflationAdjusted(self.ssecAmount[i],
-                                 self.y2ages[n][i], rates, refAge)
+        return tx.inflationAdjusted(self.ssecAmount[i],
+                                    self.y2ages[n][i], rates, refAge)
 
     def transferWealth(self, year, late):
         '''
@@ -422,6 +432,7 @@ class Plan:
         self.yincome = {'RothX': np.zeros((self.maxHorizon)),
                         'gross': np.zeros((self.maxHorizon)),
                         'taxes': np.zeros((self.maxHorizon)),
+                        'irmaa': np.zeros((self.maxHorizon)),
                         'net': np.zeros((self.maxHorizon)),
                         'target': np.zeros((self.maxHorizon)),
                         'taxable': np.zeros((self.maxHorizon)),
@@ -431,6 +442,7 @@ class Plan:
         # Shorter names:
         yRothX = self.yincome['RothX']
         yincomeTax = self.yincome['taxes']
+        yirmaa = self.yincome['irmaa']
         ytargetIncome = self.yincome['target']
         ynetIncome = self.yincome['net']
         ygrossIncome = self.yincome['gross']
@@ -517,7 +529,7 @@ class Plan:
                 u.vprint(self.names[i], 'Tax-deferred account growth:',
                          d(ya2taxDef[n][i]), '->', d(ya2taxDef[n+1][i]))
                 rmd = ya2taxDef[n+1][i] * \
-                    rmdFraction(self.yyear[n], self.yob[i])
+                    tx.rmdFraction(self.yyear[n], self.yob[i])
                 ya2taxDef[n+1][i] -= rmd
                 ys2rmd[n][i] = rmd
                 ytaxableIncome[n] += rmd
@@ -570,13 +582,13 @@ class Plan:
             adjustedTarget = self.target * \
                 spendingAdjustment(np.max(self.y2ages[n][:]),
                                    self.profile)
-            ytargetIncome[n] = inflationAdjusted(adjustedTarget,
-                                                 self.yyear[n],
-                                                 self.rates, now)
+            ytargetIncome[n] = tx.inflationAdjusted(adjustedTarget,
+                                                    self.yyear[n],
+                                                    self.rates, now)
 
             gross = ytaxableIncome[n] + yRothX[n] + btiEvent
-            estimatedTax = incomeTax(gross, self.yob, filingStatus,
-                                     self.yyear[n], self.rates)
+            estimatedTax = tx.incomeTax(gross, self.yob, filingStatus,
+                                        self.yyear[n], self.rates)
             netInc = ytaxfreeIncome[n] + ytaxableIncome[n] - estimatedTax
             gap = netInc - ytargetIncome[n]
             u.vprint('Net income target:', d(ytargetIncome[n]),
@@ -599,6 +611,7 @@ class Plan:
                              depRatio, self.names, True)
                 yincomeTax[n] = estimatedTax
                 ygrossIncome[n] = gross
+                yirmaa[n] = tx.irmaa(gross, filingStatus, n, self.rates)
                 ynetIncome[n] = netInc
             else:
                 # Solve amount to withdraw self-consistently.
@@ -623,9 +636,9 @@ class Plan:
                     txbl = amounts['tax-def'][0]
                     totaxblIncome = yRothX[n] + ytaxableIncome[n] + \
                         btiEvent + txbl
-                    estimatedTax = incomeTax(totaxblIncome, self.yob,
-                                             filingStatus, self.yyear[n],
-                                             self.rates)
+                    estimatedTax = tx.incomeTax(totaxblIncome, self.yob,
+                                                filingStatus, self.yyear[n],
+                                                self.rates)
 
                     netInc = (txfree + txbl + ytaxfreeIncome[n] +
                               ytaxableIncome[n] - estimatedTax)
@@ -666,12 +679,14 @@ class Plan:
                 ynetIncome[n] = (ytaxfreeIncome[n] +
                                  ytaxableIncome[n] -
                                  yincomeTax[n])
-                ygrossIncome[n] = ytaxableIncome[n] + yRothX[n] + btiEvent
+                gross = ytaxableIncome[n] + yRothX[n] + btiEvent
+                ygrossIncome[n] = gross
+                yirmaa[n] = tx.irmaa(gross, filingStatus, n, self.rates)
                 u.vprint('\t...of which', d(txbl), 'is taxable.')
-                u.vprint('Adj. Income:\n Gross taxable:', d(ygrossIncome[n]),
-                         'Tax free:', d(ytaxfreeIncome[n]),
-                         'Net:', d(ynetIncome[n]),
-                         'Tax bill:', d(yincomeTax[n]))
+                u.vprint('Adj. Income:\n Gross taxable:', d(gross),
+                         'Tax bill:', d(yincomeTax[n]),
+                         '\n Net:', d(ynetIncome[n]),
+                         'Tax free:', d(ytaxfreeIncome[n]))
 
             # Now check if anyone passed? Then transfer wealth at year-end.
             for j in 0, 1:
@@ -699,16 +714,18 @@ class Plan:
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
     def plotAccounts(self):
-        '''Plot values of savings accounts over time.'''
-
+        '''
+        Plot values of savings accounts over time.
+        '''
         title = 'Savings Balance'
         types = ['taxable', 'tax-deferred', 'tax-free']
 
         return self.stackPlot(title, self.y2accounts, types, 'upper left')
 
     def plotSources(self):
-        '''Plot income over time.'''
-
+        '''
+        Plot income over time.
+        '''
         title = 'Raw Income Sources'
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
@@ -716,14 +733,16 @@ class Plan:
         return self.stackPlot(title, self.y2source, types, 'upper right')
 
     def stackPlot(self, title, accounts, types, location):
-        '''Core function for stacked plots.'''
+        '''
+        Core function for stacked plots.
+        '''
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         mgr = plt.get_current_fig_manager()
-        # mgr.window.setGeometry(810, 100, 800, 640)
+        mgr.window.setGeometry(810, 100, 800, 640)
 
         accountValues = {}
         for aType in types:
@@ -746,22 +765,25 @@ class Plan:
         return fig, ax
 
     def plotNetIncome(self):
-        '''Plot net income and target over time.'''
-
+        '''
+        Plot net income and target over time.
+        '''
         title = 'Net Income vs. Target'
 
         data = {'net': '-', 'target': ':'}
         return self.lineIncomePlot(data, title)
 
     def lineIncomePlot(self, data, title):
-        '''Core line plotter function.'''
+        '''
+        Core line plotter function.
+        '''
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        plt.grid(visible='both')
         fig, ax = plt.subplots()
+        plt.grid(visible='both')
         mgr = plt.get_current_fig_manager()
-        # mgr.window.setGeometry(0, 100, 800, 640)
+        mgr.window.setGeometry(0, 100, 800, 640)
 
         for aType in data:
             ax.plot(self.yyear, self.yincome[aType],
@@ -779,11 +801,13 @@ class Plan:
         return fig, ax
 
     def plotTaxableIncome(self):
-        '''Plot income tax and taxable income over time.'''
+        '''
+        Plot income tax and taxable income over time horizon.
+        '''
         import matplotlib.pyplot as plt
 
         title = 'Taxable Income vs. Tax Brackets'
-        data = {'gross': '-', 'taxes': '-'}
+        data = {'gross': '-'}
 
         fig, ax = self.lineIncomePlot(data, title)
 
@@ -798,6 +822,50 @@ class Plan:
         plt.grid(visible='both')
         ax.legend(loc='upper left', reverse=True)
         # ax.legend(loc='upper left')
+
+    def plotTaxes(self):
+        '''
+        Plot income tax paid over time.
+        '''
+        title = 'Income Tax and IRMAA'
+        data = {'irmaa': '-', 'taxes': '-'}
+
+        fig, ax = self.lineIncomePlot(data, title)
+
+        # plt.show()
+        return fig, ax
+
+    def plotRates(self):
+        '''
+        Plot rate values used over the time horizon.
+        '''
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        plt.grid(visible='both')
+        mgr = plt.get_current_fig_manager()
+        mgr.window.setGeometry(0, 100, 800, 640)
+
+        title = 'Return & Inflation Rates ('+str(self.rateMethod)
+        if self.rateMethod in ['historical', 'stochastic']:
+            title += ' '+str(self.rateFrm)+'-'+str(self.rateTo)
+        elif self.rateMethod == 'fixed':
+            title += str(self.rateMethod)
+        title += ')'
+        rateName = ['S&P500 including dividends', 'AA Corporate bonds',
+                    '10-y Treasury bonds', 'Inflation']
+        for i in range(4):
+            ax.plot(self.yyear, 100*self.rates.transpose()[i],
+                    label=rateName[i], ls=':')
+
+        ax.legend(loc='upper left', reverse=False)
+        # ax.legend(loc='upper left')
+        ax.set_title(title)
+        ax.set_xlabel('year')
+        ax.set_ylabel('%')
+
+        # plt.show()
+        return fig, ax
 
     def savePlanXL(self, basename):
         import pandas as pd
@@ -930,28 +998,6 @@ def d(value, f=0):
     return '$'+mystr.format(value)
 
 
-def inflationAdjusted(base, year, rates, refYear=0):
-    '''
-    Return inflation-adjusted amount for year provided
-    with respect to referenced year. Rate is annual rate.
-    If refYear is zero, current year will be used as a reference.
-    Rate can be a single number or a rate series of 4-tuples
-    provided by the rates() class. In the latter case, each tuple
-    contains stocks, bonds, fixed assets, and inflation rates.
-    '''
-    if refYear == 0:
-        refYear = datetime.date.today().year
-
-    fac = 1
-    if type(rates) == float:
-        fac *= (1 + rates)**(year-refYear)
-    else:
-        for i in range(year-refYear):
-            fac *= (1 + rates[i][3])
-
-    return base*fac
-
-
 def pfReturn(assetRatios, rates, year, who):
     '''
     Return annual rate of return depending on portfolio asset ratio.
@@ -974,63 +1020,6 @@ def age(yob, refYear=0):
     return (refYear - yob)
 
 
-def irmaa(magi, filingStatus, year, rates):
-    '''
-    Return inflation-adjusted annual irmaa costs for Part B
-    premium with magi and filing status provided.
-    '''
-
-    table2023_MFJ = {194000: 0, 246000: 2769.60, 306000: 3956.40,
-                     366000: 5143.20, 750000: 6330.00, 1000000: 6726.00}
-    table2023_S = {97000: 0, 123000: 2769.60, 153000: 3956.40,
-                   183000: 5143.20, 500000: 6330.00, 1000000: 6726.00}
-
-    if filingStatus == 'married':
-        table = table2023_MFJ
-    elif filingStatus == 'single':
-        table = table2023_S
-    else:
-        u.xprint('In irmaa function: Unknown status', filingStatus)
-
-    for bracket in table:
-        if magi < inflationAdjusted(bracket, year, rates, 2023):
-            return inflationAdjusted(table[bracket], year, rates, 2023)
-
-    u.xprint('In irmaa function: Logical flaw.')
-
-
-def stdDeduction(yobs, filingStatus, year, rates):
-    '''
-    Return standard income deduction for year provided
-    depending on filing status. Additional deduction will
-    be added for individuals 65 and over.
-    '''
-    # [Single, married filing jointly] numbers.
-    ded2017 = [6350, 12700]
-    ded2023 = [13850, 27700]
-
-    ded65 = 0
-    if filingStatus == 'single':
-        k = 0
-    elif filingStatus == 'married':
-        k = 1
-    else:
-        u.xprint('In stdDeduction: Unknown status', filingStatus)
-
-    # Add inflation-adjusted $1,850 deduction for each spouse over 65 yo.
-    for i in range(k):
-        if year - yobs[i] >= 65:
-            ded65 += inflationAdjusted(1850, year, rates, 2023)
-
-    # Use the TCJA numbers for years before 2025 (Tax Cuts and Jobs Act).
-    if year <= 2025:
-        return ded65 + inflationAdjusted(ded2023[k], year, rates, 2023)
-
-    # Tax code returns to 2017 code in 2026.
-    # Guestimated to be around 16k$ in 2026.
-    return ded65 + inflationAdjusted(ded2017[k], year, rates, 2017)
-
-
 def spendingAdjustment(age, profile='flat'):
     '''
     Return spending profile for age provided.
@@ -1051,114 +1040,6 @@ def spendingAdjustment(age, profile='flat'):
         return table[age-65]
 
     u.xprint('In spendingAdjustment: Unknown profile', profile)
-
-
-def rmdFraction(year, yob):
-    '''Return fraction of tax-deferred investment that
-    needs to be distributed.'''
-
-    table = [27.4, 26.5, 25.5, 24.6, 23.7, 22.9, 22.0, 21.1, 20.2, 19.4, 18.5,
-             17.7, 16.8, 16.0, 15.2, 14.4, 13.7, 12.9, 12.2, 11.5, 10.8, 10.1,
-             9.5, 8.9, 8.4, 7.8, 7.3, 6.8, 6.4, 6.0, 5.6, 5.2, 4.9, 4.6
-             ]
-
-    yage = year - yob
-    # Account for increase of RMD age between 2023 and 2032.
-    if (year > 2032 and yage < 75) or (year > 2023 and yage < 73) \
-            or (yage < 72):
-        return 0
-
-    return 1./table[yage-72]
-
-
-def incomeTax(agi, yobs, filingStatus, year, rates):
-    '''Return tax liability for a given income.
-    Married filing jointly or single status only.'''
-    # TCJA rates
-    # Married filing jointly
-    tax2023_MFJ = {22000: 0.10,
-                   89450: 0.12,
-                   190750: 0.22,
-                   364200: 0.24,
-                   462500: 0.32,
-                   693750: 0.35,
-                   10000000: 0.37
-                   }
-
-    # Single
-    tax2023_S = {11000: 0.10,
-                 44725: 0.12,
-                 95375: 0.22,
-                 182100: 0.24,
-                 231250: 0.32,
-                 578125: 0.35,
-                 10000000: 0.37
-                 }
-
-    # 2017 rates
-    # Married filing jointly
-    tax2017_MFJ = {18650: 0.10,
-                   75900: 0.15,
-                   153100: 0.25,
-                   233350: 0.28,
-                   416700: 0.33,
-                   470000: 0.35,
-                   10000000: 0.396
-                   }
-
-    # Single
-    tax2017_S = {9325: 0.10,
-                 37950: 0.15,
-                 91900: 0.25,
-                 191650: 0.28,
-                 416700: 0.33,
-                 418400: 0.35,
-                 10000000: 0.396
-                 }
-
-    taxbleIncome = agi - stdDeduction(yobs, filingStatus, year, rates)
-
-    if filingStatus == 'single':
-        if year < 2026:
-            refYear = 2023
-            taxTable = tax2023_S
-        else:
-            refYear = 2017
-            taxTable = tax2017_S
-    elif filingStatus == 'married':
-        if year < 2026:
-            refYear = 2023
-            taxTable = tax2023_MFJ
-        else:
-            refYear = 2017
-            taxTable = tax2017_MFJ
-    else:
-        u.xprint('In tax calculation: Unknown status', filingStatus)
-
-    return calcTax(taxbleIncome, year, rates, refYear, taxTable)
-
-
-def calcTax(income, year, rates, refYear, taxTable):
-    '''Compute the income tax on taxable income provided using the
-    referenced tax table. Bracket are inflation-adjusted for the
-    year provided.'''
-    if income <= 0:
-        return 0
-
-    prevBracket = 0
-    tax = 0
-    for bracket, txrate in taxTable.items():
-        nowBracket = inflationAdjusted(bracket, year, rates, refYear)
-        if income > nowBracket:
-            tax += (nowBracket - prevBracket)*txrate
-        else:
-            tax += (income - prevBracket)*txrate
-            # print('Effective tax rate of', tax/income, 'on', income)
-            return tax
-
-        prevBracket = nowBracket
-
-    u.xprint('Logic error in calcTax! Income:', d(income))
 
 
 def readTimeLists(filename, n):
