@@ -794,7 +794,7 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
-        from IPython import get_ipithon
+        from IPython import get_ipython
 
         fig, ax = plt.subplots()
         plt.grid(visible='both')
