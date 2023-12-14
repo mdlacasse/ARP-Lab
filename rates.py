@@ -219,15 +219,15 @@ class rates:
         if method is None or method == 'default':
             self.method = 'fixed'
             u.vprint('Using default fixed rates values: (%)\n',
-                     100*self._defRates)
+                     100.*self._defRates)
             self._setFixedRates(self._defRates)
             return
         elif type(method) == list:
             self.method == 'fixed'
-            method = np.array(method)
+            method = np.array(method, dtype=float)
             u.vprint('Setting rates using fixed values: (%)\n', method)
             # Convert percent to decimal.
-            method /= 100
+            method /= 100.
             self._setFixedRates(method)
             return
 
@@ -239,10 +239,10 @@ class rates:
         self.to = int(to - FROM + 1)
 
         if method == 'historical':
-            u.vprint('Using', method, 'rates using data from', frm, 'to', to)
+            u.vprint('Using', method, 'rates representing data from', frm, 'to', to)
             self._rateMethod = self._histRates
         elif method == 'stochastic':
-            u.vprint('Using', method, 'rates using data from', frm, 'to', to)
+            u.vprint('Using', method, 'rates from', frm, 'to', to)
             self._rateMethod = self._stochRates
             self.means, self.stdDev = getDistributions(frm, to)
         else:

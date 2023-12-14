@@ -15,6 +15,7 @@ This program comes with no guarantee. Use at your own risks.
 ######################################################################
 # Some of the modules required:
 
+import sys
 import datetime
 import numpy as np
 import math
@@ -118,7 +119,7 @@ class Plan:
 
         self.interpolateAR()
 
-        self.ysource = None
+        self.y2source = None
         self.yincome = None
 
         self.rates = None
@@ -292,6 +293,7 @@ class Plan:
             u.xprint('Unknown split keyword:', split)
 
         self.split = split
+        u.vprint('Using spousal split of', split)
 
     def getSplit(self, oldsplit, amount, n, surviving):
         '''
@@ -331,6 +333,9 @@ class Plan:
         else:
             u.xprint('Unknown profile keyword: ', profile)
 
+        u.vprint('Using desired net income of', d(income),
+                 'with', profile, 'profile')
+
     def setPension(self, amounts, ages):
         '''
         Set amounts of fixed income pensions if any, and age at which
@@ -341,6 +346,7 @@ class Plan:
 
         self.pensionAmount = amounts
         self.pensionAge = ages
+        u.vprint('Setting pension of', amounts, 'at age(s)', ages)
 
     def computePension(self, n, i):
         '''
@@ -363,6 +369,7 @@ class Plan:
 
         self.ssecAmount = amounts
         self.ssecAge = ages
+        u.vprint('Setting SSA of', amounts, 'at age(s)', ages)
 
     def computeSS(self, n, rates, i):
         '''
@@ -665,7 +672,7 @@ class Plan:
                                               n+1, wdrlRatio,
                                               self.names, True)
 
-                u.vprint('Performing withdrawal of', d(withdrawal),
+                u.vprint('Performed withdrawal of', d(total),
                          'using split of', '{:.2f}'.format(wdrlRatio))
 
                 txfree = amounts['taxable'][0] + amounts['tax-free'][0]
@@ -730,7 +737,7 @@ class Plan:
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
 
-        return self.stackPlot(title, self.y2source, types, 'upper right')
+        return self.stackPlot(title, self.y2source, types, 'upper left')
 
     def stackPlot(self, title, accounts, types, location):
         '''
@@ -742,7 +749,7 @@ class Plan:
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         mgr = plt.get_current_fig_manager()
-        mgr.window.setGeometry(810, 100, 800, 640)
+        # mgr.window.setGeometry(810, 100, 800, 640)
 
         accountValues = {}
         for aType in types:
@@ -783,7 +790,7 @@ class Plan:
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         mgr = plt.get_current_fig_manager()
-        mgr.window.setGeometry(0, 100, 800, 640)
+        # mgr.window.setGeometry(0, 100, 800, 640)
 
         for aType in data:
             ax.plot(self.yyear, self.yincome[aType],
@@ -844,7 +851,7 @@ class Plan:
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         mgr = plt.get_current_fig_manager()
-        mgr.window.setGeometry(0, 100, 800, 640)
+        # mgr.window.setGeometry(0, 100, 800, 640)
 
         title = 'Return & Inflation Rates ('+str(self.rateMethod)
         if self.rateMethod in ['historical', 'stochastic']:
@@ -907,17 +914,17 @@ class Plan:
             planData = {}
             planData['year'] = self.yyear[:-1]
             planData[self.names[i]+' txbl acc. wrdwl'] = \
-                self.ysource['taxable'].transpose()[i][:-1]
+                self.y2source['taxable'].transpose()[i][:-1]
             planData[self.names[i]+' RMD'] = \
-                self.source['rmd'].transpose()[i][:-1]
+                self.y2source['rmd'].transpose()[i][:-1]
             planData[self.names[i]+' distribution'] = \
-                self.source['dist'].transpose()[i][:-1]
+                self.y2source['dist'].transpose()[i][:-1]
             planData[self.names[i]+' Roth conversion'] = \
-                self.source['RothX'].transpose()[i][:-1]
+                self.y2source['RothX'].transpose()[i][:-1]
             planData[self.names[i]+' tax-free wdrwl'] = \
-                self.source['tax-free'].transpose()[i][:-1]
+                self.y2source['tax-free'].transpose()[i][:-1]
             planData[self.names[i]+' big-ticket items'] = \
-                self.source['bti'].transpose()[i][:-1]
+                self.y2source['bti'].transpose()[i][:-1]
             df = pd.DataFrame(planData)
             for rows in dataframe_to_rows(df, index=False, header=True):
                 ws.append(rows)
@@ -936,6 +943,7 @@ class Plan:
         while True:
             try:
                 fname = 'plan'+'_'+basename+'.xlsx'
+                u.vprint('Saving plan as', fname)
                 wb.save(fname)
                 break
             except PermissionError:
@@ -959,17 +967,17 @@ class Plan:
 
         for i in range(self.count):
             planData[self.names[i]+' txbl acc. wrdwl'] = \
-                self.source['taxable'].transpose()[i]
+                self.y2source['taxable'].transpose()[i]
             planData[self.names[i]+' RMD'] = \
-                self.source['rmd'].transpose()[i]
+                self.y2source['rmd'].transpose()[i]
             planData[self.names[i]+' distribution'] = \
-                self.source['dist'].transpose()[i]
+                self.y2source['dist'].transpose()[i]
             planData[self.names[i]+' Roth conversion'] = \
-                self.source['RothX'].transpose()[i]
+                self.y2source['RothX'].transpose()[i]
             planData[self.names[i]+' tax-free wdrwl'] = \
-                self.source['tax-free'].transpose()[i]
+                self.y2source['tax-free'].transpose()[i]
             planData[self.names[i]+' big-ticket items'] = \
-                self.source['bti'].transpose()[i]
+                self.y2source['bti'].transpose()[i]
 
         df = pd.DataFrame(planData)
 
@@ -987,6 +995,30 @@ class Plan:
                     break
             except Exception:
                 u.xprint('Unanticipated exception', Exception)
+
+
+    def showAndSave(self, filename=None):
+        '''
+        Final statement for scripts desiring to save events in excel file.
+        '''
+        import matplotlib.pyplot as plt
+        import os.path as path
+ 
+        plt.show(block=False)
+        plt.pause(0.001)
+        while True:
+            key = input(
+                "[Enter] 'q' to quit, or 's' to save: ")
+            if key == 'q':
+                plt.close("all")
+                break
+            elif key == 's':
+                if filename is None:
+                    filename = path.basename(sys.argv[0][:-3])
+                self.savePlanXL(filename)
+                break
+
+        sys.exit(0)
 
 
 ######################################################################
@@ -1200,4 +1232,5 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
         print('Missing', d(remain), 'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]
+
 
