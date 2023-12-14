@@ -14,7 +14,6 @@ This program comes with no guarantee. Use at your own risks.
 
 ######################################################################
 # Some of the modules required:
-
 import sys
 import datetime
 import numpy as np
@@ -100,22 +99,20 @@ class Plan:
         self.ssecAge = None
 
         self.y2assetRatios = {}
-        self.accountAR = {}
         self.boundsAR = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
             self.y2assetRatios[aType] = \
-                    np.zeros((self.maxHorizon, self.count, 3))
-            self.accountAR[aType] = np.zeros((self.maxHorizon, self.count, 3))
-            self.boundsAR[aType] = np.zeros((2, self.count, 3))
+                    np.zeros((self.maxHorizon, self.count, 4))
+            self.boundsAR[aType] = np.zeros((2, self.count, 4))
 
         # Set default values on bounds.
         for who in range(self.count):
-            self.boundsAR['taxable'][0][who][:] = [0, .5, .5]
-            self.boundsAR['taxable'][1][who][:] = [0, .5, .5]
-            self.boundsAR['tax-deferred'][0][who][:] = [.6, .4, 0]
-            self.boundsAR['tax-deferred'][1][who][:] = [.6, .4, 0]
-            self.boundsAR['tax-free'][0][who][:] = [.6, .4, 0]
-            self.boundsAR['tax-free'][1][who][:] = [.6, .4, 0]
+            self.boundsAR['taxable'][0][who][:] = [0, .25, .5, .25]
+            self.boundsAR['taxable'][1][who][:] = [0, .25, .5, .25]
+            self.boundsAR['tax-deferred'][0][who][:] = [.6, .4, 0, 0]
+            self.boundsAR['tax-deferred'][1][who][:] = [.6, .4, 0, 0]
+            self.boundsAR['tax-free'][0][who][:] = [.6, .4, 0, 0]
+            self.boundsAR['tax-free'][1][who][:] = [.6, .4, 0, 0]
 
         self.interpolateAR()
 
@@ -150,6 +147,20 @@ class Plan:
         Utility function for setting initial time and final time values
         on asset ratios.
         '''
+        assert len(taxableAR) == self.count
+        assert len(taxDeferredAR) == self.count
+        assert len(taxFreeAR) == self.count
+
+        for i in range(self.count):
+            assert len(taxableAR[i]) == 4
+            assert abs(sum(taxableAR[i]) - 100) < 0.01
+
+            assert len(taxDeferredAR[i]) == 4
+            assert abs(sum(taxDeferredAR[i]) - 100) < 0.01
+
+            assert len(taxFreeAR[i]) == 4
+            assert abs(sum(taxFreeAR[i]) - 100) < 0.01
+
         which = ['Initial', 'Final'][i]
 
         u.vprint(which, 'asset ratios set to: (%)\n', taxableAR,
@@ -166,19 +177,12 @@ class Plan:
         if method == 'linear':
             for accType in ['taxable', 'tax-deferred', 'tax-free']:
                 for who in range(self.count):
-                    dat0 = np.linspace(self.boundsAR[accType][0][who][0],
-                                       self.boundsAR[accType][1][who][0],
-                                       self.horizons[who])
-                    dat1 = np.linspace(self.boundsAR[accType][0][who][1],
-                                       self.boundsAR[accType][1][who][1],
-                                       self.horizons[who])
-                    dat2 = np.linspace(self.boundsAR[accType][0][who][2],
-                                       self.boundsAR[accType][1][who][2],
-                                       self.horizons[who])
-                    for k in range(self.horizons[who]):
-                        self.y2assetRatios[accType][k][who][1] = dat1[k]
-                        self.y2assetRatios[accType][k][who][0] = dat0[k]
-                        self.y2assetRatios[accType][k][who][2] = dat2[k]
+                    for j in range(4):
+                        dat = np.linspace(self.boundsAR[accType][0][who][j],
+                                          self.boundsAR[accType][1][who][j],
+                                          self.horizons[who])
+                        for k in range(self.horizons[who]):
+                            self.y2assetRatios[accType][k][who][j] = dat[k]
         else:
             u.xprint('Method', method, 'not supported')
 
@@ -498,7 +502,7 @@ class Plan:
                 tmp = min(reqRoth, ya2taxDef[n][i])
                 if tmp != reqRoth:
                     u.vprint('WARNING: Insufficient funds for Roth conversion for',
-                          self.names[i], 'in', self.yyear[n])
+                             self.names[i], 'in', self.yyear[n])
                     u.vprint('\tRequested:', d(reqRoth), 'Performed:', d(tmp))
                 if tmp > 0:
                     u.vprint(self.names[i], 'requested Roth conversion:',
@@ -754,7 +758,7 @@ class Plan:
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         try:
-            shell = get_ipython().__class__.__name__
+            get_ipython().__class__.__name__
         except NameError:
             mgr = plt.get_current_fig_manager()
             mgr.window.setGeometry(0, 40, 720, 600)
@@ -799,7 +803,7 @@ class Plan:
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         try:
-            shell = get_ipython().__class__.__name__
+            get_ipython().__class__.__name__
         except NameError:
             mgr = plt.get_current_fig_manager()
             mgr.window.setGeometry(0, 40, 720, 600)
@@ -863,7 +867,7 @@ class Plan:
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         try:
-            shell = get_ipython().__class__.__name__
+            get_ipython().__class__.__name__
         except NameError:
             mgr = plt.get_current_fig_manager()
             mgr.window.setGeometry(800, 40, 720, 600)
@@ -881,7 +885,7 @@ class Plan:
             data = 100*self.rates.transpose()[i]
             label = rateName[i] + ' <' + \
                 '{:.2f}'.format(np.mean(data)) + '>'
-            ax.plot(self.yyear, data, label=label, ls=ltype[i%4])
+            ax.plot(self.yyear, data, label=label, ls=ltype[i % 4])
 
         ax.legend(loc='upper left', reverse=False)
         # ax.legend(loc='upper left')
@@ -1014,14 +1018,13 @@ class Plan:
             except Exception:
                 u.xprint('Unanticipated exception', Exception)
 
-
     def showAndSave(self, filename=None):
         '''
         Final statement for scripts desiring to save events in excel file.
         '''
         import matplotlib.pyplot as plt
         import os.path as path
- 
+
         plt.show(block=False)
         plt.pause(0.001)
         while True:
@@ -1071,7 +1074,8 @@ def pfReturn(assetRatios, rates, year, who):
     '''
     return (assetRatios[year][who][0]*rates[year][0] +
             assetRatios[year][who][1]*rates[year][1] +
-            assetRatios[year][who][2]*rates[year][2])
+            assetRatios[year][who][2]*rates[year][2] +
+            assetRatios[year][who][3]*rates[year][3])
 
 
 def age(yob, refYear=0):
