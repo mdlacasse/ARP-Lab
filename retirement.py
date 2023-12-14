@@ -1041,6 +1041,14 @@ class Plan:
             elif key == 'x':
                 sys.exit(0)
 
+    def show(self, block=True):
+        '''
+        Use to show graphs between runs.
+        '''
+        import matplotlib.pyplot as plt
+
+        plt.show(block=block)
+
     def estate(self, taxRate):
         '''
         Return estimated post-tax value of total of assets at
@@ -1055,8 +1063,9 @@ class Plan:
         total += (taxRate/100)*sum(self.y2accounts['tax-deferred'][-2][:])
 
         now = datetime.date.today().year
+        value = tx.inflationAdjusted(1., now, self.rates, self.yyear[-2])
 
-        return tx.inflationAdjusted(total, now, self.rates, self.yyear[-2])
+        return tx.inflationAdjusted(total, now, self.rates, self.yyear[-2]), value
 
 
 ######################################################################
