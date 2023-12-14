@@ -1,11 +1,12 @@
 '''
 This class provides the historical annual rate of returns for different
-classes of assets: S&P500, AA corporate bonds, AAA corporate bonds,
+classes of assets: S&P500, AA corporate bonds, Aaa corporate bonds,
 10-year Treasury bonds, and inflation as measured by CPI all from
 1928 until now.
 
 Values were extracted from NYU's Stern School of business:
 https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html
+from references therein.
 
 Rate lists will need to be updated with values for current year.
 When doing so, the TO bound defined below will need to be adjusted
@@ -51,8 +52,8 @@ SP500 = [
     18.02, 28.47, -18.01,
     ]
 
-# Annual rate of return (%) of AA Corporate Bonds since 1928.
-BondsAA = [
+# Annual rate of return (%) of Baa Corporate Bonds since 1928.
+BondsBaa = [
     3.22, 3.02,
     # 1930
     0.54, -15.68, 23.59, 12.97, 18.82, 13.31, 11.38, -4.42, 9.24, 7.98,
@@ -76,8 +77,8 @@ BondsAA = [
     10.41, 0.93, -14.49,
     ]
 
-# Annual rate of return (%) of AAA Corporate Bonds since 1928.
-BondsAAA = [
+# Annual rate of return (%) of Aaa Corporate Bonds since 1928.
+BondsAaa = [
     3.28, 4.14,
     # 1930
     5.86, -1.56, 11.07, 5.30, 10.15, 6.90, 6.33, 2.17, 4.31, 4.28,
@@ -101,7 +102,7 @@ BondsAAA = [
     9.93, -1.93, -12.74,
     ]
 
-# Annual rate of return (%) for 10y Treasury notes since 1928.
+# Annual rate of return (%) for 10-y Treasury notes since 1928.
 TBonds = [
     0.84, 4.20,
     # 1930
@@ -124,6 +125,31 @@ TBonds = [
     8.46, 16.04, 2.97, -9.10, 10.75, 1.28, 0.69, 2.80, -0.02, 9.64,
     # 2020
     11.33, -4.42, -17.83,
+    ]
+
+# Annual rates of return for 3-month Treasury bills since 1928.
+TBills = [
+    3.08, 3.16,
+    # 1930
+    4.55, 2.31, 1.07, 0.96, 0.28, 0.17, 0.17, 0.28, 0.07, 0.05,
+    # 1940
+    0.04, 0.13, 0.34, 0.38, 0.38, 0.38, 0.38, 0.60, 1.05, 1.12,
+    # 1950
+    1.20, 1.52, 1.72, 1.89, 0.94, 1.72, 2.62, 3.22, 1.77, 3.39,
+    # 1960
+    2.87, 2.35, 2.77, 3.16, 3.55, 3.95, 4.86, 4.29, 5.34, 6.67,
+    # 1970
+    6.39, 4.33, 4.06, 7.04, 7.85, 5.79, 4.98, 5.26, 7.18, 10.05,
+    # 1980
+    11.39, 14.04, 10.60, 8.62, 9.54, 7.47, 5.97, 5.78, 6.67, 8.11,
+    # 1990
+    7.50, 5.38, 3.43, 3.00, 4.25, 5.49, 5.01, 5.06, 4.78, 4.64,
+    # 2000
+    5.82, 3.40, 1.61, 1.01, 1.37, 3.15, 4.73, 4.36, 1.37, 0.15,
+    # 2010
+    0.14, 0.05, 0.09, 0.06, 0.03, 0.05, 0.32, 0.93, 1.94, 2.06,
+    # 2020
+    0.35, 0.05, 2.02,
     ]
 
 # Inflation rate as U.S. CPI index (%) since 1928 (1914).
@@ -156,13 +182,16 @@ Inflation = [
 
 def getDistributions(frm, to):
     '''
-    Pre-compute normal distribution parameters for each of the series above.
-    This calculation does not yet take into account the correlations
-    between the different rates. This will need to be fixed in the future,
-    and return cross-correlations as a 4x4 matrix.
+    Pre-compute normal distribution parameters for the series above.
+    This calculation takes into account the correlations between
+    the different rates. Function returns means and covariance matrix.
     '''
-    series = {'SP500': SP500, 'BondsAA': BondsAA,
+    import pandas as pd
+
+    series = {'SP500': SP500, 'BondsBaa': BondsBaa,
               'T. Bonds': TBonds, 'Inflation': Inflation}
+
+    df = pd.DataFrame(series)
 
     means = np.zeros(len(series))
     stdDev = np.zeros(len(series))
@@ -170,25 +199,25 @@ def getDistributions(frm, to):
     # Check if called direclty by year instead of by index.
     if frm >= 1000:
         frm -= FROM
-        to = to - FROM + 1
+        to = to - FROM
 
     assert (0 <= frm and frm <= len(SP500))
     assert (0 <= to and to <= len(SP500))
     assert (frm <= to)
 
-    i = 0
-    u.vprint('Series\t\tMean (%)\t\t\tStd-Deviation (%)')
-    for key in series:
-        means[i] = np.mean(series[key][frm:to])
-        stdDev[i] = np.std(series[key][frm:to])
-        u.vprint(key, '  \t', means[i], '\t\t', stdDev[i])
-        i += 1
+    df = df.truncate(before=frm, after=to) 
 
-    # Convert from percent to decimal
-    means /= 100
-    stdDev /= 100
+    means = df.mean()
+    covar = df.cov()
 
-    return means, stdDev
+    u.vprint('means: (%)\n', means)
+    u.vprint('covariance: (%^2)\n', covar)
+
+    # Convert from percent to decimal.
+    means /= 100.
+    covar /= 10000.
+
+    return means, covar
 
 
 class rates:
@@ -198,10 +227,13 @@ class rates:
     Rate are stored in decimal, but API is in percent.
     '''
 
-    # Default rates are average over last 30 years.
-    _defRates = np.array([0.11008387, 0.0736, 0.05028387, 0.02513871])
-
     def __init__(self):
+        '''
+        Default constructor.
+        '''
+        # Default rates are average over last 30 years.
+        self._defRates = np.array([0.11008387, 0.0736, 0.05028387, 0.02513871])
+
         self.frm = 0
         self.to = len(SP500)
 
@@ -213,7 +245,7 @@ class rates:
         self._rateMethod = self._fixedRates
 
         self.means = np.zeros((4))
-        self.stdDev = np.zeros((4))
+        self.covar = np.zeros((4))
 
     def setMethod(self, method, frm=FROM, to=TO):
         if method is None or method == 'default':
@@ -244,7 +276,7 @@ class rates:
         elif method == 'stochastic':
             u.vprint('Using', method, 'rates from', frm, 'to', to)
             self._rateMethod = self._stochRates
-            self.means, self.stdDev = getDistributions(frm, to)
+            self.means, self.covar = getDistributions(frm, to)
         else:
             u.xprint('Method not supported:', method)
 
@@ -306,7 +338,7 @@ class rates:
 
         hrates = np.array([
               SP500[(self.frm+i+j) % (self.to-self.frm)],
-              BondsAA[(self.frm+i+j) % (self.to-self.frm)],
+              BondsBaa[(self.frm+i+j) % (self.to-self.frm)],
               TBonds[(self.frm+i+j) % (self.to-self.frm)],
               Inflation[(self.frm+i+j) % (self.to-self.frm)]
               ])
@@ -323,22 +355,17 @@ class rates:
         For 1928-2022, mean and std-deviations are:
 
         SP500: 11.506631578947369 19.494020708683514
-        BondsAA:  6.957578947368422 7.7547925712242405
-        BondsAAA:  5.732000000000001 6.196953512985656
+        BondsBaa:  6.957578947368422 7.7547925712242405
+        BondsAaa:  5.732000000000001 6.196953512985656
         TBonds:  4.86842105263158 7.950702096212301
         Inflation:  3.112315789473685 3.9364045718026226
 
-        Current code assumes that distributions are independent.
-        They are not! Code needs to account for colinearities
-        between stocks, bonds, and inflation. TODO.
+        But these variables need to be looked at together
+        through multvariate analysis.
+        Code below accounts for covariance between stocks, bonds,
+        and inflation.
 
         '''
-
-        srates = np.array([
-            np.random.normal(self.means[0], self.stdDev[0]),
-            np.random.normal(self.means[1], self.stdDev[1]),
-            np.random.normal(self.means[2], self.stdDev[2]),
-            np.random.normal(self.means[3], self.stdDev[3])
-            ])
+        srates = np.random.multivariate_normal(self.means, self.covar)
 
         return srates

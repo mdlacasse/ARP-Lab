@@ -128,6 +128,9 @@ class Plan:
         self.rateTo = None
         self.setRates('default')
 
+        # Track if run ws successful
+        self.success = True
+
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
         Set values of asset distribution in each of the accounts
@@ -494,10 +497,9 @@ class Plan:
                 reqRoth = self.timeLists[i]['Roth X'][n]
                 tmp = min(reqRoth, ya2taxDef[n][i])
                 if tmp != reqRoth:
-                    print('WARNING: Insufficient funds for Roth conversion of',
-                          d(reqRoth), 'in year', self.yyear[n],
-                          'for', self.names[i])
-                    print('Performed:', d(tmp))
+                    u.vprint('WARNING: Insufficient funds for Roth conversion for',
+                          self.names[i], 'in', self.yyear[n])
+                    u.vprint('\tRequested:', d(reqRoth), 'Performed:', d(tmp))
                 if tmp > 0:
                     u.vprint(self.names[i], 'requested Roth conversion:',
                              d(reqRoth), ' performed:', d(tmp))
@@ -520,9 +522,9 @@ class Plan:
                 ctrb = self.timeLists[i]['ctrb taxable'][n]
                 growth = (ya2taxable[n][i] + 0.5*ctrb) * \
                     pfReturn(self.y2assetRatios['taxable'], self.rates, n, i)
-                ys2div[n][i] = growth
+                ys2div[n][i] = min(0, growth)
                 ya2taxable[n+1][i] += ya2taxable[n][i] + ctrb + growth
-                ytaxableIncome[n] += growth
+                ytaxableIncome[n] += min(0, growth)
                 u.vprint(self.names[i], 'Taxable account growth:',
                          d(ya2taxable[n][i]), '->', d(ya2taxable[n+1][i]))
 
@@ -572,9 +574,10 @@ class Plan:
                                                   ya2taxDef, ya2taxFree,
                                                   n+1, (i+1) % 2, self.names)
                     if total != abs(bti):
-                        print('WARNING: Insufficient funds for BTI of', d(bti),
-                              'in year', self.yyear[n], 'for', self.names[i])
-                        print('Performed:', d(total))
+                        print('WARNING: Insufficient funds for BTI for',
+                              self.names[i], 'in', self.yyear[n])
+                        print('\tRequested:', d(bti), 'Performed:', d(total))
+                        self.success = False
 
                     # A BTI is not an income unless we created a taxable event
                     # that we track separately (as we do for Roth conversions).
@@ -618,7 +621,8 @@ class Plan:
                              depRatio, self.names, True)
                 yincomeTax[n] = estimatedTax
                 ygrossIncome[n] = gross
-                yirmaa[n] = tx.irmaa(gross, filingStatus, n, self.rates)
+                yirmaa[n] = tx.irmaa(gross, filingStatus,
+                                     self.yyear[n], self.rates)
                 ynetIncome[n] = netInc
             else:
                 # Solve amount to withdraw self-consistently.
@@ -653,7 +657,7 @@ class Plan:
                     # No point to loop if we are running out of money.
                     if abs(total - abs(withdrawal)) > 1:
                         print('WARNING: Running out of money!')
-                        print('Leaving iterative loop.')
+                        self.success = False
                         break
 
                     delta = netInc - ytargetIncome[n]
@@ -688,7 +692,8 @@ class Plan:
                                  yincomeTax[n])
                 gross = ytaxableIncome[n] + yRothX[n] + btiEvent
                 ygrossIncome[n] = gross
-                yirmaa[n] = tx.irmaa(gross, filingStatus, n, self.rates)
+                yirmaa[n] = tx.irmaa(gross, filingStatus,
+                                     self.yyear[n], self.rates)
                 u.vprint('\t...of which', d(txbl), 'is taxable.')
                 u.vprint('Adj. Income:\n Gross taxable:', d(gross),
                          'Tax bill:', d(yincomeTax[n]),
@@ -748,8 +753,11 @@ class Plan:
 
         fig, ax = plt.subplots()
         plt.grid(visible='both')
-        mgr = plt.get_current_fig_manager()
-        # mgr.window.setGeometry(810, 100, 800, 640)
+        try:
+            shell = get_ipython().__class__.__name__
+        except NameError:
+            mgr = plt.get_current_fig_manager()
+            mgr.window.setGeometry(0, 40, 720, 600)
 
         accountValues = {}
         for aType in types:
@@ -786,11 +794,15 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
+        from IPython import get_ipithon
 
         fig, ax = plt.subplots()
         plt.grid(visible='both')
-        mgr = plt.get_current_fig_manager()
-        # mgr.window.setGeometry(0, 100, 800, 640)
+        try:
+            shell = get_ipython().__class__.__name__
+        except NameError:
+            mgr = plt.get_current_fig_manager()
+            mgr.window.setGeometry(0, 40, 720, 600)
 
         for aType in data:
             ax.plot(self.yyear, self.yincome[aType],
@@ -850,8 +862,11 @@ class Plan:
 
         fig, ax = plt.subplots()
         plt.grid(visible='both')
-        mgr = plt.get_current_fig_manager()
-        # mgr.window.setGeometry(0, 100, 800, 640)
+        try:
+            shell = get_ipython().__class__.__name__
+        except NameError:
+            mgr = plt.get_current_fig_manager()
+            mgr.window.setGeometry(800, 40, 720, 600)
 
         title = 'Return & Inflation Rates ('+str(self.rateMethod)
         if self.rateMethod in ['historical', 'stochastic']:
@@ -861,9 +876,12 @@ class Plan:
         title += ')'
         rateName = ['S&P500 including dividends', 'AA Corporate bonds',
                     '10-y Treasury bonds', 'Inflation']
+        ltype = ['-', '-.', ':', '--']
         for i in range(4):
-            ax.plot(self.yyear, 100*self.rates.transpose()[i],
-                    label=rateName[i], ls=':')
+            data = 100*self.rates.transpose()[i]
+            label = rateName[i] + ' <' + \
+                '{:.2f}'.format(np.mean(data)) + '>'
+            ax.plot(self.yyear, data, label=label, ls=ltype[i%4])
 
         ax.legend(loc='upper left', reverse=False)
         # ax.legend(loc='upper left')
@@ -1008,8 +1026,8 @@ class Plan:
         plt.pause(0.001)
         while True:
             key = input(
-                "[Enter] 'q' to quit, or 's' to save: ")
-            if key == 'q':
+                "[Enter] 'r' to repeat, 's' to save, or 'x' to exit: ")
+            if key == 'r':
                 plt.close("all")
                 break
             elif key == 's':
@@ -1017,8 +1035,25 @@ class Plan:
                     filename = path.basename(sys.argv[0][:-3])
                 self.savePlanXL(filename)
                 break
+            elif key == 'x':
+                sys.exit(0)
 
-        sys.exit(0)
+    def estate(self, taxRate):
+        '''
+        Return estimated post-tax value of total of assets at
+        the end of the run in today's $. The tax rate provided
+        is used to determine an approximate value and provide
+        the tax-deferred portion of the portfolio an after-tax
+        value. The inflation rates used during the simulation
+        are re-used to bring the net value in today's $.
+        '''
+        total = sum(self.y2accounts['taxable'][-2][:])
+        total += sum(self.y2accounts['tax-free'][-2][:])
+        total += (taxRate/100)*sum(self.y2accounts['tax-deferred'][-2][:])
+
+        now = datetime.date.today().year
+
+        return tx.inflationAdjusted(total, now, self.rates, self.yyear[-2])
 
 
 ######################################################################
@@ -1228,7 +1263,7 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
 
     if commit:
         print('WARNING: Short withdrawal of', d(amount),
-              'in year', year, 'for', names[i], '.')
+              'in year', year, 'for', names[i])
         print('Missing', d(remain), 'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]

@@ -28,6 +28,7 @@ def inflationAdjusted(base, year, rates, refYear=0):
     Rate can be a single number or a rate series of 4-tuples
     provided by the rates() class. In the latter case, each tuple
     contains stocks, bonds, fixed assets, and inflation rates.
+    Note that refYear can be in the past, or in the future of year.
     '''
     if refYear == 0:
         refYear = datetime.date.today().year
@@ -36,8 +37,12 @@ def inflationAdjusted(base, year, rates, refYear=0):
     if type(rates) == float:
         fac *= (1 + rates)**(year-refYear)
     else:
-        for i in range(year-refYear):
-            fac *= (1 + rates[i][3])
+        if year >= refYear:
+            for i in range(year-refYear):
+                fac *= (1 + rates[i][3])
+        else:
+            for i in range(refYear - year):
+                fac /= (1 + rates[i][3])
 
     return base*fac
 

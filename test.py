@@ -1,5 +1,4 @@
 import retirement as rp
-import matplotlib.pyplot as plt
 
 rp.setVerbose(True)
 
@@ -52,15 +51,4 @@ plan.plotTaxableIncome()
 plan.plotNetIncome()
 plan.plotSources()
 
-
-plt.show(block=False)
-plt.pause(0.001)
-while True:
-    key = input(
-        "[Enter] 'q' to quit, or 's' to save: ")
-    if key == 'q':
-        plt.close("all")
-        break
-    elif key == 's':
-        plot.saveXL('something')
-        break
+plan.showAndSave()
