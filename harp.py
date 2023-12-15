@@ -1071,6 +1071,8 @@ class Plan:
         the tax-deferred portion of the portfolio an after-tax
         value. The inflation rates used during the simulation
         are re-used to bring the net value in today's $.
+        Cumulative inflation factor is returned as well as the
+        estate value.
         '''
         total = sum(self.y2accounts['taxable'][-2][:])
         total += sum(self.y2accounts['tax-free'][-2][:])
@@ -1080,7 +1082,7 @@ class Plan:
         value = total/div
         i = self.maxHorizon-2
 
-        return value, div
+        return value, (div - 1)*100
 
 
 ######################################################################
@@ -1088,8 +1090,16 @@ def d(value, f=0):
     '''
     Return a string formatting number in $ currency.
     '''
-    mystr = '{:,.'+str(f)+'f}'
-    return '$'+mystr.format(value)
+    mystr = '${:,.'+str(f)+'f}'
+    return mystr.format(value)
+
+
+def pc(value, f=1):
+    '''
+    Return a string formatting number in percent.
+    '''
+    mystr = '{:.'+str(f)+'f}%'
+    return mystr.format(value)
 
 
 def pfReturn(assetRatios, rates, year, who):
