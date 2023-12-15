@@ -197,7 +197,11 @@ class Plan:
         effects of return sequence.
         '''
         dr = rates.rates()
-        dr.setMethod(method, frm, to)
+        if to is None:
+            dr.setMethod(method, frm)
+        else:
+            dr.setMethod(method, frm, to)
+
         self.rateMethod = method
         self.rateFrm = frm
         self.rateTo = to
