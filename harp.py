@@ -1079,8 +1079,6 @@ class Plan:
         div = tx.inflationAdjusted(1., self.maxHorizon-2, self.rates)
         value = total/div
         i = self.maxHorizon-2
-        print('rate of', self.yyear[0], 'is', self.rates[0])
-        print('rate of', self.yyear[i], 'is', self.rates[i])
 
         return value, div
 
