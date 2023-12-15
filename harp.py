@@ -908,7 +908,7 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def savePlanXL(self, basename):
+    def saveRealizationXL(self, basename):
         import pandas as pd
         from openpyxl import Workbook
         from openpyxl.utils.dataframe import dataframe_to_rows
@@ -988,7 +988,7 @@ class Plan:
             except Exception:
                 u.xprint('Unanticipated exception', Exception)
 
-    def savePlanCSV(self, basename):
+    def saveRealizationCSV(self, basename):
         import pandas as pd
 
         planData = {}
@@ -1048,7 +1048,7 @@ class Plan:
             elif key == 's':
                 if filename is None:
                     filename = path.basename(sys.argv[0][:-3])
-                self.savePlanXL(filename)
+                self.saveRealizaionXL(filename)
                 break
             elif key == 'x':
                 sys.exit(0)
