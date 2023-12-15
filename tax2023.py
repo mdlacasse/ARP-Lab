@@ -1,11 +1,13 @@
 '''
 
-Python file handling tax code for retirement planning.
+Python file handling US tax code.
 
 Currently, it supports single filers and married
 filing jointly. Feel free to modify for other cases.
 
-Martin-D. Lacasse - 2023
+This file needs to be updated every year.
+
+Copyright -- Martin-D. Lacasse (2023)
 
 This program comes with no guarantee. Use at your own risks.
 
@@ -20,7 +22,7 @@ import datetime
 import utils as u
 
 
-def inflationAdjusted(base, year, rates, refYear=0):
+def inflationAdjusted(base, year, rates, refIndex=0):
     '''
     Return inflation-adjusted amount for year provided
     with respect to referenced year. Rate is annual rate.
@@ -28,21 +30,29 @@ def inflationAdjusted(base, year, rates, refYear=0):
     Rate can be a single number or a rate series of 4-tuples
     provided by the rates() class. In the latter case, each tuple
     contains stocks, bonds, fixed assets, and inflation rates.
-    Note that refYear can be in the past, or in the future of year.
+    Note that refIndex can be non-zero, indication an offset in
+    the calculation. Year can be the nth year from now,
+    or a year in the future.
     '''
-    if refYear == 0:
-        refYear = datetime.date.today().year
+    # Were we given a year? Make it in reference to this updated 2023.
+    if year > 1000:
+        index = year - 2023
+    else:
+        index = year
+
+    assert index >= refIndex
 
     fac = 1
     if type(rates) == float:
-        fac *= (1 + rates)**(year-refYear)
+        # sign will take care of division.
+        fac *= (1 + rates)**(index - refIndex)
+    elif index >= refIndex:
+        for i in range(refIndex, index):
+            fac *= (1 + rates[i][3])
+            # print('--->', i, rates[i][3], fac)
     else:
-        if year >= refYear:
-            for i in range(year-refYear):
-                fac *= (1 + rates[i][3])
-        else:
-            for i in range(refYear - year):
-                fac /= (1 + rates[i][3])
+        for i in range(index, refIndex):
+            fac /= (1 + rates[i][3])
 
     return base*fac
 
@@ -66,8 +76,8 @@ def irmaa(magi, filingStatus, year, rates):
         u.xprint('In irmaa function: Unknown status', filingStatus)
 
     for bracket in table:
-        if magi < inflationAdjusted(bracket, year, rates, 2023):
-            return inflationAdjusted(table[bracket], year, rates, 2023)
+        if magi < inflationAdjusted(bracket, year, rates):
+            return inflationAdjusted(table[bracket], year, rates)
 
     u.xprint('In irmaa function: Logical flaw for magi.', magi)
 
@@ -95,15 +105,15 @@ def stdDeduction(yobs, filingStatus, year, rates):
     # Add inflation-adjusted $1,850 deduction for each spouse over 65 yo.
     for i in range(k):
         if year - yobs[i] >= 65:
-            ded65 += inflationAdjusted(1850, year, rates, 2023)
+            ded65 += inflationAdjusted(1850, year, rates)
 
     # Use the TCJA numbers for years before 2025 (Tax Cuts and Jobs Act).
     if year <= 2025:
-        return ded65 + inflationAdjusted(ded2023[k], year, rates, 2023)
+        return ded65 + inflationAdjusted(ded2023[k], year, rates)
 
     # Tax code returns to 2017 code in 2026.
     # Guestimated to be around 16k$ in 2026.
-    return ded65 + inflationAdjusted(ded2017[k], year, rates, 2023)
+    return ded65 + inflationAdjusted(ded2017[k], year, rates)
 
 
 def rmdFraction(year, yob):
@@ -196,25 +206,21 @@ def incomeTax(agi, yobs, filingStatus, year, rates):
 
     if filingStatus == 'single':
         if year < 2026:
-            refYear = 2023
             taxTable = tax2023_S
         else:
-            refYear = 2023
             taxTable = tax2017_S
     elif filingStatus == 'married':
         if year < 2026:
-            refYear = 2023
             taxTable = tax2023_MFJ
         else:
-            refYear = 2023
             taxTable = tax2017_MFJ
     else:
         u.xprint('In tax calculation: Unknown status', filingStatus)
 
-    return calcTax(taxbleIncome, year, rates, refYear, taxTable)
+    return calcTax(taxbleIncome, year, rates, taxTable)
 
 
-def calcTax(income, year, rates, refYear, taxTable):
+def calcTax(income, year, rates, taxTable):
     '''Compute the income tax on taxable income provided using the
     referenced tax table. Bracket are inflation-adjusted for the
     year provided.'''
@@ -224,7 +230,7 @@ def calcTax(income, year, rates, refYear, taxTable):
     prevBracket = 0
     tax = 0
     for bracket, txrate in taxTable.items():
-        nowBracket = inflationAdjusted(bracket, year, rates, refYear)
+        nowBracket = inflationAdjusted(bracket, year, rates)
         if income > nowBracket:
             tax += (nowBracket - prevBracket)*txrate
         else:

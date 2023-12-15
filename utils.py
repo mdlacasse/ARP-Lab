@@ -1,11 +1,8 @@
 '''
 
-A short Python program for retirement planning.
-Calculations are done on a yearly basis,
-and default for a married couple filing jointly.
-Feel free to modify for other cases.
+Python file for handling error messages.
 
-Martin-D. Lacasse - 2023
+Copyright -- Martin-D. Lacasse (2023)
 
 This program comes with no guarantee. Use at your own risks.
 

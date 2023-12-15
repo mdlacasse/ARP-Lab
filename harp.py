@@ -1,12 +1,12 @@
 '''
 
-A short Python program for retirement planning.
+A Python program for exploring scenarios in retirement planning.
 Calculations are done on a yearly basis.
 
 Currently, it supports single filers and married
 filing jointly. Feel free to modify for other cases.
 
-Martin-D. Lacasse - 2023
+Copyright --  Martin-D. Lacasse (2023)
 
 This program comes with no guarantee. Use at your own risks.
 
@@ -22,7 +22,7 @@ import math
 # Our own modules:
 import utils as u
 import rates
-import tax as tx
+import tax2023 as tx
 
 ######################################################################
 
@@ -67,12 +67,14 @@ class Plan:
 
         if self.count == 1:
             ages = age(YOB[0])
-            self.y2ages = np.array(range(ages, ages+self.maxHorizon))
+            self.y2ages = np.zeros((self.count, self.maxHorizon), dtype=int)
+            self.y2ages[0][:] = range(ages, ages+self.maxHorizon)
         elif self.count == 2:
             ages = np.array([age(YOB[0]), age(YOB[1])])
             self.y2ages = np.array([range(ages[0], ages[0]+self.maxHorizon),
                                    range(ages[1], ages[1]+self.maxHorizon)])
-            self.y2ages = self.y2ages.transpose()
+
+        self.y2ages = self.y2ages.transpose()
 
         # Keep data in [year][who] for now.
         # We'll transpose later if needed when plotting.
@@ -188,7 +190,7 @@ class Plan:
 
         u.vprint('Interpolated asset ratios using', method, 'method.')
 
-    def setRates(self, method, frm=None, to=None, offset=0):
+    def setRates(self, method, frm=None, to=None):
         '''
         Generate rates for return and inflation based on the method and
         years selected. Optional offsest can be provided to investigate
@@ -199,8 +201,9 @@ class Plan:
         self.rateMethod = method
         self.rateFrm = frm
         self.rateTo = to
-        # Beware as some inflation calculations cannot start in 2017
-        self.rates = dr.genSeries(offset, self.maxHorizon)
+        # Remember that inflation calculations cannot start earlier
+        # than this year.
+        self.rates = dr.genSeries(frm, to, self.maxHorizon)
         # u.vprint('Generated rate series of', len(self.rates))
 
     def setAssetBalances(self, *, taxable, taxDeferred, taxFree, beneficiary):
@@ -378,18 +381,20 @@ class Plan:
         self.ssecAge = ages
         u.vprint('Setting SSA of', amounts, 'at age(s)', ages)
 
-    def computeSS(self, n, rates, i):
+    def computeSS(self, n, who):
         '''
         Compute social security benefits (indexed) given age,
         inflation, and predicted amount.
         '''
-        refAge = self.ssecAge[i]
-
-        if self.y2ages[n][i] < refAge:
+        if self.y2ages[n][who] < self.ssecAge[who]:
             return 0
 
-        return tx.inflationAdjusted(self.ssecAmount[i],
-                                    self.y2ages[n][i], rates, refAge)
+        now = datetime.date.today().year
+        refIndex = self.yob[who] + self.ssecAge[who] - now
+
+        # Inflation is computed from benefit start year.
+        return tx.inflationAdjusted(self.ssecAmount[who], n,
+                                    self.rates, refIndex)
 
     def transferWealth(self, year, late):
         '''
@@ -488,7 +493,7 @@ class Plan:
 
             # Tracker for taxable distribution related to big items.
             btiEvent = 0
-            for i in 0, 1:
+            for i in range(self.count):
                 # Is the nth year pass i's life horizon?
                 if n > self.horizons[i]:
                     u.vprint('Skipping', self.names[i], 'in', self.yyear[n])
@@ -526,6 +531,7 @@ class Plan:
                 ctrb = self.timeLists[i]['ctrb taxable'][n]
                 growth = (ya2taxable[n][i] + 0.5*ctrb) * \
                     pfReturn(self.y2assetRatios['taxable'], self.rates, n, i)
+
                 ys2div[n][i] = min(0, growth)
                 ya2taxable[n+1][i] += ya2taxable[n][i] + ctrb + growth
                 ytaxableIncome[n] += min(0, growth)
@@ -535,14 +541,19 @@ class Plan:
                 # Same for tax-deferred, including RMDs on year-end balance.
                 ctrb = self.timeLists[i]['ctrb 401k'][n] + \
                     self.timeLists[i]['ctrb IRA'][n]
+
                 growth = (ya2taxDef[n][i] + 0.5*ctrb) * \
                     pfReturn(self.y2assetRatios['tax-deferred'],
                              self.rates, n, i)
+
                 ya2taxDef[n+1][i] += ya2taxDef[n][i] + ctrb + growth
+
                 u.vprint(self.names[i], 'Tax-deferred account growth:',
                          d(ya2taxDef[n][i]), '->', d(ya2taxDef[n+1][i]))
+
                 rmd = ya2taxDef[n+1][i] * \
                     tx.rmdFraction(self.yyear[n], self.yob[i])
+
                 ya2taxDef[n+1][i] -= rmd
                 ys2rmd[n][i] = rmd
                 ytaxableIncome[n] += rmd
@@ -553,14 +564,16 @@ class Plan:
 
                 growth = (ya2taxFree[n][i] + 0.5*ctrb) * \
                     pfReturn(self.y2assetRatios['tax-free'], self.rates, n, i)
+
                 ya2taxFree[n+1][i] += ya2taxFree[n][i] + ctrb + growth
+
                 u.vprint(self.names[i], 'Tax-free account growth:',
                          d(ya2taxFree[n][i]), '->', d(ya2taxFree[n+1][i]))
 
                 # Compute fixed income for this year:
                 ys2pension[n][i] = self.computePension(n, i)
                 ytaxableIncome[n] += ys2pension[n][i]
-                ys2ssec[n][i] = self.computeSS(n, self.rates, i)
+                ys2ssec[n][i] = self.computeSS(n, i)
                 # Assume our revenues are such that 85% of SS is taxable.
                 # Fix if needs arises.
                 ytaxfreeIncome[n] += 0.15*ys2ssec[n][i]
@@ -597,8 +610,7 @@ class Plan:
                 spendingAdjustment(np.max(self.y2ages[n][:]),
                                    self.profile)
             ytargetIncome[n] = tx.inflationAdjusted(adjustedTarget,
-                                                    self.yyear[n],
-                                                    self.rates, now)
+                                                    n, self.rates)
 
             gross = ytaxableIncome[n] + yRothX[n] + btiEvent
             estimatedTax = tx.incomeTax(gross, self.yob, filingStatus,
@@ -705,7 +717,7 @@ class Plan:
                          'Tax free:', d(ytaxfreeIncome[n]))
 
             # Now check if anyone passed? Then transfer wealth at year-end.
-            for j in 0, 1:
+            for j in range(self.count):
                 if n == self.horizons[j]:
                     u.vprint(self.names[j], 'has passed.')
                     surviving -= 1
@@ -1041,13 +1053,15 @@ class Plan:
             elif key == 'x':
                 sys.exit(0)
 
-    def show(self, block=True):
+    def show(self, pause=2, block=False):
         '''
         Use to show graphs between runs.
         '''
         import matplotlib.pyplot as plt
 
         plt.show(block=block)
+        plt.pause(pause)
+        plt.close('all')
 
     def estate(self, taxRate):
         '''
@@ -1062,10 +1076,13 @@ class Plan:
         total += sum(self.y2accounts['tax-free'][-2][:])
         total += (taxRate/100)*sum(self.y2accounts['tax-deferred'][-2][:])
 
-        now = datetime.date.today().year
-        value = tx.inflationAdjusted(1., now, self.rates, self.yyear[-2])
+        div = tx.inflationAdjusted(1., self.maxHorizon-2, self.rates)
+        value = total/div
+        i = self.maxHorizon-2
+        print('rate of', self.yyear[0], 'is', self.rates[0])
+        print('rate of', self.yyear[i], 'is', self.rates[i])
 
-        return tx.inflationAdjusted(total, now, self.rates, self.yyear[-2]), value
+        return value, div
 
 
 ######################################################################

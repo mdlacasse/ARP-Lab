@@ -1,6 +1,7 @@
 '''
+
 This class provides the historical annual rate of returns for different
-classes of assets: S&P500, AA corporate bonds, Aaa corporate bonds,
+classes of assets: S&P500, Baa corporate bonds, Aaa corporate bonds,
 10-year Treasury bonds, and inflation as measured by CPI all from
 1928 until now.
 
@@ -12,7 +13,7 @@ Rate lists will need to be updated with values for current year.
 When doing so, the TO bound defined below will need to be adjusted
 to the last current data year.
 
-Copyright Martin-D. Lacasse (2023)
+Copyright -- Martin-D. Lacasse (2023)
 
 Last updated: December 2023
 
@@ -196,7 +197,7 @@ def getDistributions(frm, to):
     means = np.zeros(len(series))
     stdDev = np.zeros(len(series))
 
-    # Check if called direclty by year instead of by index.
+    # Check if were called direclty by year instead of by index.
     if frm >= 1000:
         frm -= FROM
         to = to - FROM
@@ -271,7 +272,8 @@ class rates:
         self.to = int(to - FROM + 1)
 
         if method == 'historical':
-            u.vprint('Using', method, 'rates representing data from', frm, 'to', to)
+            u.vprint('Using', method, 'rates representing data from',
+                     frm, 'to', to)
             self._rateMethod = self._histRates
         elif method == 'stochastic':
             u.vprint('Using', method, 'rates from', frm, 'to', to)
@@ -286,69 +288,72 @@ class rates:
         assert len(rates) == 4
         self._myRates = np.array(rates)
 
-    def genSeries(self, i, n):
+    def genSeries(self, frm, to, n):
         '''
         Generate a series of nx4 entries of rates representing S&P500,
-        corporate AA bonds, 10-y treasury bonds, and inflation,
+        corporate Baa bonds, 10-y treasury bonds, and inflation,
         respectively. Value 'i' is used to shift the series from
         the first year requested. If there are less than 'n' entries
         in sub-series selected by 'setMethod()', values will be repeated
         modulo the length of the sub-series.
         '''
-
         rateSeries = np.zeros((n, 4))
 
+        # Include bounds in range.
+        if to is None:
+            frm = 0
+            span = 1
+            first = 0
+        else:
+            span = to - frm
+            first = frm - FROM
+
+        # Assign 4 at the time.
         for k in range(n):
-            rateSeries[k][:] = self.getRates(i, k)[:]
+            rateSeries[k][:] = self.getRates(first+(k%span))[:]
 
         return rateSeries
 
-    def getRates(self, i, j=0):
+    def getRates(self, i):
         '''
         This function is the front-end for getting rate values depending
         on the method and the year range selected.
 
         Values of 'i' allows to set a starting year for the series
-        allowing to explore risk sequence. The other 'j' parameter
-        is the offset from the start 'i'. Both indices are in
-        array coordinates, i.e., not in year coordinates.
+        allowing to explore risk sequence.
+        Index is in array coordinates, i.e., not in year coordinates.
         '''
+        assert (0 <= i and i <= len(SP500))
 
-        assert (0 <= i and 0 <= j)
-        return self._rateMethod(i, j)
+        return self._rateMethod(i)
 
-    def _fixedRates(self, i, j):
+    def _fixedRates(self, i):
         '''
         Return average rates set through setRatesMethod().
         If not specified, default average rates are provided.
         For fixed rates, values are time-independent, and therefore
-        the 'i' and 'j' arguments are ignored.
+        the 'i' argument is ignored.
         '''
         return self._myRates
 
-    def _histRates(self, i, j):
+    def _histRates(self, i):
         '''
         Return a list of 4 values representing the historical rates
-        of stock, Corporate AA bonds, Treasury bonds, and inflation,
+        of stock, Corporate Baa bonds, Treasury bonds, and inflation,
         respectively. Values are for year (frm + i + j)%(to - frm),
         with values recycled back to 'frm' for years after 'to' year.
         Reason for using two values is to allow Monte-Carlo simulations
         to start at a different year while cycling though the whole series.
         '''
+        hrates = np.array([SP500[i], BondsBaa[i], TBonds[i], Inflation[i]])
 
-        hrates = np.array([
-              SP500[(self.frm+i+j) % (self.to-self.frm)],
-              BondsBaa[(self.frm+i+j) % (self.to-self.frm)],
-              TBonds[(self.frm+i+j) % (self.to-self.frm)],
-              Inflation[(self.frm+i+j) % (self.to-self.frm)]
-              ])
         # Convert from percent to decimal.
         return hrates/100
 
-    def _stochRates(self, i, j):
+    def _stochRates(self, i):
         '''
         Return a list of 4 values representing the historical rates
-        of stock, Corporate AA bonds, Treasury bonds, and inflation,
+        of stock, Corporate Baa bonds, Treasury bonds, and inflation,
         respectively. Values are pulled from normal distributions
         having the same characteristics as the historical data for
         the range of years selected.
