@@ -65,9 +65,9 @@ def runOnce(stype, frm, to, plot=False):
     plan.run()
 
     if plot:
-        plan.plotAccounts()
+        # plan.plotAccounts()
         # plan.plotTaxableIncome()
-        # plan.plotNetIncome()
+        plan.plotNetIncome()
         # plan.plotSources()
         # plan.plotTaxes()
         plan.plotRates()
@@ -85,7 +85,7 @@ def runHistorical(frm):
     1966 year.
     '''
     span = 35
-    plot = False
+    plot = True
     to = frm + span
     N = 2022 - span - frm
     success = 0

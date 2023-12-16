@@ -37,11 +37,11 @@ def setVerbose(state):
 class Plan:
     def __init__(self, YOB, expectancy):
         '''
-        Constructor requires two lists the first one containing the
+        Constructor requires two lists: the first one containing the
         years of birth of each spouse and the other, life expectancies.
         To be clear: for singles, a list of one entry, for married
         couples, a list of two entries.
-        This nformation will determine the size of arrays required
+        This information will determine the size of arrays required
         for the calculations.
         '''
         # Check inputs.
@@ -190,18 +190,13 @@ class Plan:
 
         u.vprint('Interpolated asset ratios using', method, 'method.')
 
-    def setRates(self, method, frm=None, to=None):
+    def setRates(self, method, frm=rates.FROM, to=rates.TO):
         '''
         Generate rates for return and inflation based on the method and
         years selected. Optional offsest can be provided to investigate
         effects of return sequence.
         '''
         dr = rates.rates()
-        if to is None:
-            dr.setMethod(method, frm)
-        else:
-            dr.setMethod(method, frm, to)
-
         self.rateMethod = method
         self.rateFrm = frm
         self.rateTo = to
