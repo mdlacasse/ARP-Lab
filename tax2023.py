@@ -14,11 +14,7 @@ This program comes with no guarantee. Use at your own risks.
 '''
 
 ######################################################################
-# Some of the modules required:
-
-import datetime
-
-# Our own modules:
+# Our own required modules:
 import utils as u
 
 

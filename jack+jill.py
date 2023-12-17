@@ -11,7 +11,9 @@ Copyright -- Martin-D. Lacasse (2023)
 This program comes with no garantee. Use at your own risks.
 
 '''
+import sys
 import harp as rp
+
 
 def runOnce(stype, frm, to, plot=False):
     '''
@@ -70,22 +72,23 @@ def runOnce(stype, frm, to, plot=False):
         plan.plotNetIncome()
         # plan.plotSources()
         # plan.plotTaxes()
-        plan.plotRates()
+        # plan.plotRates()
 
         # plan.showAndSave()
+        pass
 
     return plan
 
 ##############################################################
 # Performing a historical simulation of N stochastic cases.
 
-def runHistorical(frm):
+
+def runHistorical(frm, plot=False):
     '''
     Run historical simulation passing through the dreaded
     1966 year.
     '''
     span = 35
-    plot = True
     to = frm + span
     N = 2022 - span - frm
     success = 0
@@ -93,7 +96,7 @@ def runHistorical(frm):
     for i in range(N):
         print('--------------------------------------------')
         print('Running case #', i, '(', frm+i, ')')
-        plan = runOnce('historical', frm+i, to+i, plot=plot) 
+        plan = runOnce('historical', frm+i, to+i, plot=plot)
         print('Plan success:', plan.success)
         if plan.success:
             success += 1
@@ -104,7 +107,9 @@ def runHistorical(frm):
               ', cum. infl.:', rp.pc(factor))
         total += estate
         if plot:
-            plan.show(5)
+            # Number of seconds to wait.
+            # For embedding in jupyter set to a low value.
+            plan.show(0.000001)
             # plan.showAndSave()
 
     print('============================================')
@@ -112,16 +117,16 @@ def runHistorical(frm):
     print('Average estate value (today\'s $): ', rp.d(total/N))
 
 
-def runMonteCarlo(N):
+def runMonteCarlo(N, plot=False):
     '''
-    Run n simulations using stochastic sinulation.
+    Run N simulations using a stochastic sinulation.
     '''
     success = 0
     total = 0
     for i in range(N):
         print('--------------------------------------------')
         print('Running case #', i)
-        plan = runOnce('stochastic', 1940, 2022, plot=False)
+        plan = runOnce('stochastic', 1940, 2022, plot=plot)
         print('Plan success:', plan.success)
         if plan.success:
             success += 1
@@ -133,22 +138,20 @@ def runMonteCarlo(N):
         total += estate
 
     print('============================================')
-    print('Success rate:', success, 'out of', '('+rp.pc(100*success/N)+')')
+    print('Success rate:', success, 'out of', N, '('+rp.pc(100*success/N)+')')
     print('Average estate value (today\'s $): ', rp.d(total/N))
 
 
 ######################################################################
 
-import sys
-
 # Pick the one you want to run from the command line argument:
 if len(sys.argv) >= 2:
     if sys.argv[1] == 'historical':
-        runHistorical(1930)
+        runHistorical(1960, True)
     elif sys.argv[1] == 'Monte-Carlo':
         if len(sys.argv) == 3:
-            N = sys.argv[2]
-            runMonteCarlo(N)
+            N = int(sys.argv[2])
+            runMonteCarlo(N, False)
         else:
             print('Monte-Carlo needs a number.')
     else:

@@ -194,9 +194,6 @@ def getDistributions(frm, to):
 
     df = pd.DataFrame(series)
 
-    means = np.zeros(len(series))
-    stdDev = np.zeros(len(series))
-
     # Check if were called direclty by year instead of by index.
     if frm >= 1000:
         frm -= FROM
@@ -206,7 +203,7 @@ def getDistributions(frm, to):
     assert (0 <= to and to <= len(SP500))
     assert (frm <= to)
 
-    df = df.truncate(before=frm, after=to) 
+    df = df.truncate(before=frm, after=to)
 
     means = df.mean()
     covar = df.cov()
@@ -288,7 +285,7 @@ class rates:
         assert len(rates) == 4
         self._myRates = np.array(rates)
 
-    def genSeries(self, frm, to, n):
+    def genSeries(self, frm=FROM, to=TO, n=TO-FROM):
         '''
         Generate a series of nx4 entries of rates representing S&P500,
         corporate Baa bonds, 10-y treasury bonds, and inflation,
@@ -299,16 +296,21 @@ class rates:
         '''
         rateSeries = np.zeros((n, 4))
 
+        # Convert years to indices.
+        frm -= FROM
+        to -= FROM
+
         # Include bounds in range.
         if to is None:
+            print('to is None')
             frm = 0
             span = 1
             first = 0
         else:
             span = to - frm
-            first = frm - FROM
+            first = frm
 
-        # Assign 4 at the time.
+        # Assign 4 values at the time.
         for k in range(n):
             rateSeries[k][:] = self.getRates(first+(k%span))[:]
 

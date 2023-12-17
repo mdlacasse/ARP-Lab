@@ -11,7 +11,6 @@ Copyright --  Martin-D. Lacasse (2023)
 This program comes with no guarantee. Use at your own risks.
 
 '''
-
 ######################################################################
 # Some of the modules required:
 import sys
@@ -127,8 +126,10 @@ class Plan:
         self.rateTo = None
         self.setRates('default')
 
-        # Track if run ws successful
+        # Track if run was successful.
         self.success = True
+        # For windows offets.
+        # self.window = geometry()
 
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
@@ -193,15 +194,15 @@ class Plan:
     def setRates(self, method, frm=rates.FROM, to=rates.TO):
         '''
         Generate rates for return and inflation based on the method and
-        years selected. Optional offsest can be provided to investigate
-        effects of return sequence.
+        years selected.
         '''
         dr = rates.rates()
+        dr.setMethod(method, frm, to)
         self.rateMethod = method
         self.rateFrm = frm
         self.rateTo = to
-        # Remember that inflation calculations cannot start earlier
-        # than this year.
+        # Remember that all coded calculations are forward looking.
+        # No reference to years before today can be done.
         self.rates = dr.genSeries(frm, to, self.maxHorizon)
         # u.vprint('Generated rate series of', len(self.rates))
 
@@ -411,8 +412,6 @@ class Plan:
         Run a simulation given the underlying assumptions for
         the next horizon years determined by life expectancies.
         '''
-        now = datetime.date.today().year
-
         # Shorter names for class variables:
         ya2taxable = self.y2accounts['taxable']
         ya2taxDef = self.y2accounts['tax-deferred']
@@ -505,7 +504,8 @@ class Plan:
                 reqRoth = self.timeLists[i]['Roth X'][n]
                 tmp = min(reqRoth, ya2taxDef[n][i])
                 if tmp != reqRoth:
-                    u.vprint('WARNING: Insufficient funds for Roth conversion for',
+                    u.vprint('WARNING:',
+                             'Insufficient funds for Roth conversion for',
                              self.names[i], 'in', self.yyear[n])
                     u.vprint('\tRequested:', d(reqRoth), 'Performed:', d(tmp))
                 if tmp > 0:
@@ -766,13 +766,9 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
+        # self.window.setGeometry()
         fig, ax = plt.subplots()
         plt.grid(visible='both')
-        try:
-            get_ipython().__class__.__name__
-        except NameError:
-            mgr = plt.get_current_fig_manager()
-            mgr.window.setGeometry(0, 40, 720, 600)
 
         accountValues = {}
         for aType in types:
@@ -809,15 +805,10 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
-        from IPython import get_ipython
 
+        # self.window.setGeometry()
         fig, ax = plt.subplots()
         plt.grid(visible='both')
-        try:
-            get_ipython().__class__.__name__
-        except NameError:
-            mgr = plt.get_current_fig_manager()
-            mgr.window.setGeometry(0, 40, 720, 600)
 
         for aType in data:
             ax.plot(self.yyear, self.yincome[aType],
@@ -875,14 +866,9 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
 
+        # self.window.setGeometry()
         fig, ax = plt.subplots()
         plt.grid(visible='both')
-        try:
-            get_ipython().__class__.__name__
-        except NameError:
-            mgr = plt.get_current_fig_manager()
-            mgr.window.setGeometry(800, 40, 720, 600)
-
         title = 'Return & Inflation Rates ('+str(self.rateMethod)
         if self.rateMethod in ['historical', 'stochastic']:
             title += ' '+str(self.rateFrm)+'-'+str(self.rateTo)
@@ -1079,7 +1065,6 @@ class Plan:
 
         div = tx.inflationAdjusted(1., self.maxHorizon-2, self.rates)
         value = total/div
-        i = self.maxHorizon-2
 
         return value, (div - 1)*100
 
@@ -1305,4 +1290,64 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
 
     return [portion1, portion2, portion3, withdrawal-remain]
 
+
+def plotRateDistributions(frm=rates.FROM, to=rates.TO):
+    '''
+    Plot histograms of the rates distributions.
+    '''
+    import matplotlib.pyplot as plt
+
+    # Bring year values to indices.
+    frm -= rates.FROM
+    to -= rates.FROM
+
+    nbins = int((to - frm)/4)
+    fig, ax = plt.subplots(1, 4, sharey=True, sharex=True, tight_layout=True)
+
+    dat0 = np.array(rates.SP500[frm:to])
+    dat1 = np.array(rates.BondsBaa[frm:to])
+    dat2 = np.array(rates.TBonds[frm:to])
+    dat3 = np.array(rates.Inflation[frm:to])
+
+    ax[0].set_title('S&P500')
+    ax[0].hist(dat0, bins=nbins)
+    ax[1].set_title('BondsBaa')
+    ax[1].hist(dat1, bins=nbins)
+    ax[2].set_title('TBonds')
+    ax[2].hist(dat2, bins=nbins)
+    ax[3].set_title('Inflation')
+    ax[3].hist(dat3, bins=nbins)
+
+    plt.show()
+
+    return fig, ax
+
+
+class geometry:
+    '''
+    Class to make plot not overlapping all on one another on windows.
+    '''
+    window = 0
+    def __init__(self):
+        pass
+
+    def setGeometry(self):
+        from IPython import get_ipython
+
+        try:
+            name = get_ipython().__class__.__name__
+            if isinstance(name, type(None)) or name == 'NoneType':
+                self.shift()
+        except NameError:
+            self.shift()
+
+        self.window += 1
+
+    def shift(self):
+        import matplotlib.pyplot as plt
+        mgr = plt.get_current_fig_manager()
+        x = (self.window%2)*800
+        y = 40 + (self.window*10)
+        mgr.window.setGeometry(x, y, 720, 600)
+        # print('Setting geometry to:', x, y)
 

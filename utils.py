@@ -15,6 +15,7 @@ import sys
 ######################################################################
 verbose = False
 
+
 def setVerbose(val):
     '''
     Set verbose to True if you want the module to be chatty.
