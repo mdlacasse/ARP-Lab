@@ -67,12 +67,14 @@ def runOnce(stype, frm, to, plot=False):
     plan.run()
 
     if plot:
+        # Pick what you would like to plot:
         # plan.plotAccounts()
-        # plan.plotTaxableIncome()
-        plan.plotNetIncome()
         # plan.plotSources()
+        # plan.plotTaxableIncome()
         # plan.plotTaxes()
-        # plan.plotRates()
+
+        plan.plotRates()
+        plan.plotNetIncome()
 
         # plan.showAndSave()
         pass
@@ -109,7 +111,8 @@ def runHistorical(frm, plot=False):
         if plot:
             # Number of seconds to wait.
             # For embedding in jupyter set to a low value.
-            plan.show(0.000001)
+            # plan.show(0.000001)
+            plan.show(2)
             # plan.showAndSave()
 
     print('============================================')

@@ -129,7 +129,7 @@ class Plan:
         # Track if run was successful.
         self.success = True
         # For windows offets.
-        # self.window = geometry()
+        self.window = geometry()
 
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
@@ -766,7 +766,6 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        # self.window.setGeometry()
         fig, ax = plt.subplots()
         plt.grid(visible='both')
 
@@ -806,7 +805,6 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        # self.window.setGeometry()
         fig, ax = plt.subplots()
         plt.grid(visible='both')
 
@@ -823,6 +821,7 @@ class Plan:
                 tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
 
         # plt.show()
+
         return fig, ax
 
     def plotTaxableIncome(self):
@@ -858,6 +857,7 @@ class Plan:
         fig, ax = self.lineIncomePlot(data, title)
 
         # plt.show()
+
         return fig, ax
 
     def plotRates(self):
@@ -866,7 +866,6 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
 
-        # self.window.setGeometry()
         fig, ax = plt.subplots()
         plt.grid(visible='both')
         title = 'Return & Inflation Rates ('+str(self.rateMethod)
@@ -891,6 +890,7 @@ class Plan:
         ax.set_ylabel('%')
 
         # plt.show()
+
         return fig, ax
 
     def saveRealizationXL(self, basename):
@@ -1045,7 +1045,9 @@ class Plan:
         import matplotlib.pyplot as plt
 
         plt.show(block=block)
-        plt.pause(pause)
+        if isInJupyter() is False:
+            plt.pause(pause)
+
         plt.close('all')
 
     def estate(self, taxRate):
@@ -1323,6 +1325,19 @@ def plotRateDistributions(frm=rates.FROM, to=rates.TO):
     return fig, ax
 
 
+def isInJupyter():
+    from IPython import get_ipython
+
+    try:
+        name = get_ipython().__class__.__name__
+        if isinstance(name, type(None)) or name == 'NoneType':
+            return False
+    except NameError:
+        return False
+
+    return True
+
+
 class geometry:
     '''
     Class to make plot not overlapping all on one another on windows.
@@ -1332,22 +1347,12 @@ class geometry:
         pass
 
     def setGeometry(self):
-        from IPython import get_ipython
-
-        try:
-            name = get_ipython().__class__.__name__
-            if isinstance(name, type(None)) or name == 'NoneType':
-                self.shift()
-        except NameError:
-            self.shift()
-
-        self.window += 1
-
-    def shift(self):
-        import matplotlib.pyplot as plt
-        mgr = plt.get_current_fig_manager()
-        x = (self.window%2)*800
-        y = 40 + (self.window*10)
-        mgr.window.setGeometry(x, y, 720, 600)
-        # print('Setting geometry to:', x, y)
+        if isInJupyter() is False:
+            import matplotlib.pyplot as plt
+            mgr = plt.get_current_fig_manager()
+            x = (self.window%2)*800
+            y = 40 + (self.window*10)
+            mgr.window.setGeometry(x, y, 720, 600)
+            # print('Setting geometry to:', x, y)
+            self.window += 1
 
