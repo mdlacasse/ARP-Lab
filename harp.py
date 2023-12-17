@@ -766,7 +766,7 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
 
         accountValues = {}
@@ -805,7 +805,7 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6, 3))
         plt.grid(visible='both')
 
         for aType in data:
@@ -866,7 +866,7 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
         title = 'Return & Inflation Rates ('+str(self.rateMethod)
         if self.rateMethod in ['historical', 'stochastic']:

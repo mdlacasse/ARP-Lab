@@ -307,7 +307,8 @@ class rates:
             span = 1
             first = 0
         else:
-            span = to - frm
+            # Since bounds are inclusive.
+            span = to - frm + 1
             first = frm
 
         # Assign 4 values at the time.
