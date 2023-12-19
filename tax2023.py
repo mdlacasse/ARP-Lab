@@ -9,7 +9,7 @@ This file needs to be updated every year.
 
 Copyright -- Martin-D. Lacasse (2023)
 
-This program comes with no guarantee. Use at your own risks.
+Disclaimer: This program comes with no guarantee. Use at your own risk.
 
 '''
 

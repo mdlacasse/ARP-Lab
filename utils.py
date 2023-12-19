@@ -4,7 +4,7 @@ Python file for handling error messages.
 
 Copyright -- Martin-D. Lacasse (2023)
 
-This program comes with no guarantee. Use at your own risks.
+Disclaimer: This program comes with no guarantee. Use at your own risk.
 
 '''
 
