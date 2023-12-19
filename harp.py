@@ -60,6 +60,9 @@ class Plan:
         # Add one more year as we are computing values for next year.
         self.maxHorizon = max(self.horizons) + 2
 
+        u.vprint('Initializing for', self.maxHorizon - 1, 'years',
+                 'for', self.count, 'individuals')
+
         # Variables starting with a 'y' are tracking yearly values.
         # Initialize variables to track year after year:
         self.yyear = np.array(range(now, now+self.maxHorizon))
@@ -74,12 +77,11 @@ class Plan:
                                    range(ages[1], ages[1]+self.maxHorizon)])
 
         self.y2ages = self.y2ages.transpose()
+        u.vprint('Current ages', self.y2ages[0])
 
-        # Keep data in [year][who] for now.
-        # We'll transpose later if needed when plotting.
-        self.y2accounts = {}
+        self.y2balances = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
-            self.y2accounts[aType] = np.zeros((self.maxHorizon, self.count))
+            self.y2balances[aType] = np.zeros((self.count))
 
         self.beneficiary = np.ones((2))
 
@@ -99,6 +101,9 @@ class Plan:
         self.ssecAmount = None
         self.ssecAge = None
 
+        # Tax rate on taxable portion of estate.
+        self.estateTaxRate = 0
+
         self.y2assetRatios = {}
         self.boundsAR = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
@@ -107,29 +112,41 @@ class Plan:
             self.boundsAR[aType] = np.zeros((2, self.count, 4))
 
         # Set default values on bounds.
-        for who in range(self.count):
-            self.boundsAR['taxable'][0][who][:] = [0, .25, .5, .25]
-            self.boundsAR['taxable'][1][who][:] = [0, .25, .5, .25]
-            self.boundsAR['tax-deferred'][0][who][:] = [.6, .4, 0, 0]
-            self.boundsAR['tax-deferred'][1][who][:] = [.6, .4, 0, 0]
-            self.boundsAR['tax-free'][0][who][:] = [.6, .4, 0, 0]
-            self.boundsAR['tax-free'][1][who][:] = [.6, .4, 0, 0]
+        u.vprint('Using default values for assets allocation ratios.')
+        for k in 0, 1:
+            self.setAR([[0, 25, 50, 25], [0, 25, 50, 25]],
+                       [[60, 40, 0, 0], [60, 40, 0, 0]],
+                       [[60, 40, 0, 0], [60, 40, 0, 0]], k)
 
         self.interpolateAR()
 
-        self.y2source = None
-        self.yincome = None
+        self.reset()
 
+    def reset(self):
+        '''
+        Reset variables that will change from one run to the other.
+        '''
         self.rates = None
         self.rateMethod = 'default'
         self.rateFrm = None
         self.rateTo = None
+
         self.setRates('default')
 
-        # Track if run was successful.
+        self.y2accounts = None
+        self.y2source = None
+        self.yincome = None
+
+        # Track if run was successful. Successful until it fails.
         self.success = True
         # For windows offets.
         self.window = geometry()
+
+    def setEstateTaxRate(self, rate):
+        '''
+        Set the tax rate on the taxable portion of the estate.
+        '''
+        self.estateTaxRate = rate
 
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
@@ -145,11 +162,12 @@ class Plan:
         '''
         self.setAR(taxableAR, taxDeferredAR, taxFreeAR, 1)
 
-    def setAR(self, taxableAR, taxDeferredAR, taxFreeAR, i):
+    def setAR(self, taxableAR, taxDeferredAR, taxFreeAR, k):
         '''
         Utility function for setting initial time and final time values
         on asset ratios.
         '''
+        # Make sure we have proper entries.
         assert len(taxableAR) == self.count
         assert len(taxDeferredAR) == self.count
         assert len(taxFreeAR) == self.count
@@ -164,13 +182,13 @@ class Plan:
             assert len(taxFreeAR[i]) == 4
             assert abs(sum(taxFreeAR[i]) - 100) < 0.01
 
-        which = ['Initial', 'Final'][i]
+        which = ['Initial', 'Final'][k]
 
         u.vprint(which, 'asset ratios set to: (%)\n', taxableAR,
                  '\n', taxDeferredAR, '\n', taxFreeAR)
-        self.boundsAR['taxable'][i] = np.array(taxableAR)/100
-        self.boundsAR['tax-deferred'][i] = np.array(taxDeferredAR)/100
-        self.boundsAR['tax-free'][i] = np.array(taxFreeAR)/100
+        self.boundsAR['taxable'][k] = np.array(taxableAR)/100
+        self.boundsAR['tax-deferred'][k] = np.array(taxDeferredAR)/100
+        self.boundsAR['tax-free'][k] = np.array(taxFreeAR)/100
 
     def interpolateAR(self, method='linear'):
         '''
@@ -220,10 +238,19 @@ class Plan:
         assert (len(taxFree) == self.count)
         assert (len(beneficiary) == self.count)
 
-        self.y2accounts['taxable'][0][:] = taxable
-        self.y2accounts['tax-deferred'][0][:] = taxDeferred
-        self.y2accounts['tax-free'][0][:] = taxFree
+        self.y2balances['taxable'][:] = taxable
+        self.y2balances['tax-deferred'][:] = taxDeferred
+        self.y2balances['tax-free'][:] = taxFree
         self.beneficiary = beneficiary
+
+        u.vprint('Taxable balances:', taxable)
+        u.vprint('Tax-deferred balances:', taxDeferred)
+        u.vprint('Tax-free balances:', taxFree)
+        u.vprint('Beneficiary:', beneficiary)
+
+    def _initializeAccounts(self):
+        for aType in ['taxable', 'tax-deferred', 'tax-free']:
+            self.y2accounts[aType][0][:] = self.y2balances[aType]
 
     # Asset ratios are lists with 3 values: stock, bonds, and fixed assets.
     def setAssetRatiosI(self, *, taxableR, taxDeferredR, taxFreeR):
@@ -344,7 +371,7 @@ class Plan:
             u.xprint('Unknown profile keyword: ', profile)
 
         u.vprint('Using desired net income of', d(income),
-                 'with', profile, 'profile')
+                 'with a', profile, 'profile')
 
     def setPension(self, amounts, ages):
         '''
@@ -412,6 +439,14 @@ class Plan:
         Run a simulation given the underlying assumptions for
         the next horizon years determined by life expectancies.
         '''
+        # Keep data in [year][who] for now.
+        # We'll transpose later if needed when plotting.
+        self.y2accounts = {}
+        for aType in ['taxable', 'tax-deferred', 'tax-free']:
+            self.y2accounts[aType] = np.zeros((self.maxHorizon, self.count))
+
+        self._initializeAccounts()
+
         # Shorter names for class variables:
         ya2taxable = self.y2accounts['taxable']
         ya2taxDef = self.y2accounts['tax-deferred']
@@ -474,7 +509,7 @@ class Plan:
         # - Taxes are paid in their current year (as estmated tax);
         # - All balances are calculated for beginning of next year.
 
-        target = self.target
+        rawTarget = self.target
 
         # For each year ahead:
         u.vprint('Computing next', self.maxHorizon,
@@ -605,7 +640,7 @@ class Plan:
 
             # Compute couple's income needs following profile based on
             # oldest spouse's timeline.
-            adjustedTarget = self.target * \
+            adjustedTarget = rawTarget * \
                 spendingAdjustment(np.max(self.y2ages[n][:]),
                                    self.profile)
             ytargetIncome[n] = tx.inflationAdjusted(adjustedTarget,
@@ -736,7 +771,7 @@ class Plan:
                     depRatio = j
                     filingStatus = 'single'
                     # Reduce target income by 40%.
-                    target *= 0.6
+                    rawTarget *= 0.6
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
@@ -778,7 +813,7 @@ class Plan:
 
         ax.stackplot(self.yyear, accountValues.values(),
                      labels=accountValues.keys(), alpha=0.8)
-        ax.legend(loc=location, reverse=True)
+        ax.legend(loc=location, reverse=True, fontsize=8)
         # ax.legend(loc=location)
         ax.set_title(title)
         ax.set_xlabel('year')
@@ -812,7 +847,7 @@ class Plan:
             ax.plot(self.yyear, self.yincome[aType],
                     label=aType, ls=data[aType])
 
-        ax.legend(loc='upper left', reverse=True)
+        ax.legend(loc='upper left', reverse=True, fontsize=8)
         # ax.legend(loc='upper left')
         ax.set_title(title)
         ax.set_xlabel('year')
@@ -844,7 +879,7 @@ class Plan:
         ax.plot(myyears, tax3233, label='32/33%', ls=':')
         ax.plot(myyears, tax35, label='35%', ls=':')
         plt.grid(visible='both')
-        ax.legend(loc='upper left', reverse=True)
+        ax.legend(loc='upper left', reverse=True, fontsize=8)
         # ax.legend(loc='upper left')
 
     def plotTaxes(self):
@@ -883,7 +918,7 @@ class Plan:
                 '{:.2f}'.format(np.mean(data)) + '>'
             ax.plot(self.yyear, data, label=label, ls=ltype[i % 4])
 
-        ax.legend(loc='upper left', reverse=False)
+        ax.legend(loc='upper left', reverse=False, fontsize=8)
         # ax.legend(loc='upper left')
         ax.set_title(title)
         ax.set_xlabel('year')
@@ -1050,7 +1085,7 @@ class Plan:
 
         plt.close('all')
 
-    def estate(self, taxRate):
+    def estate(self, taxRate=None):
         '''
         Return estimated post-tax value of total of assets at
         the end of the run in today's $. The tax rate provided
@@ -1061,14 +1096,94 @@ class Plan:
         Cumulative inflation factor is returned as well as the
         estate value.
         '''
+        if taxRate is None:
+            taxRate = self.estateTaxRate
+
         total = sum(self.y2accounts['taxable'][-2][:])
         total += sum(self.y2accounts['tax-free'][-2][:])
-        total += (taxRate/100)*sum(self.y2accounts['tax-deferred'][-2][:])
+        total += (1 - taxRate/100)*sum(self.y2accounts['tax-deferred'][-2][:])
 
         div = tx.inflationAdjusted(1., self.maxHorizon-2, self.rates)
         value = total/div
 
         return value, (div - 1)*100
+
+    def runOnce(self, stype, frm=rates.FROM, to=rates.TO, myplots=[]):
+        '''
+        Run one instance of a simulation.
+        '''
+        self.reset()
+        self.setRates(stype, frm, to)
+
+        self.run()
+
+        plotDic = {'rates': self.plotRates, 'net income': self.plotNetIncome,
+                   'sources': self.plotSources, 'taxes': self.plotTaxes,
+                   'taxable income': self.plotTaxableIncome,
+                   'accounts': self.plotAccounts
+                   }
+
+        for pl in myplots:
+            plotDic[pl]()
+
+        return self
+
+    def runHistorical(self, frm, to, myplots=[]):
+        '''
+        Run historical simulation from each year in the rates provided.
+        '''
+        to = frm + self.maxHorizon
+        N = rates.TO - self.maxHorizon - frm
+        successCount = 0
+        total = 0
+        for i in range(N):
+            print('--------------------------------------------')
+            print('Running case #', i, '(', frm+i, ')')
+            self.runOnce('historical', frm+i, to+i, myplots=myplots)
+            print('Plan success:', self.success)
+            if self.success:
+                successCount += 1
+
+            # Use tax rate provided on taxable part of estate.
+            estate, factor = self.estate(self.estateTaxRate)
+            print('Estate: (today\'s $)', d(estate),
+                  ', cum. infl.:', pc(factor))
+            total += estate
+            if len(myplots) > 0:
+                # Number of seconds to wait.
+                # For embedding in jupyter set to a low value.
+                # plan.show(0.000001)
+                self.show(2)
+                # plan.showAndSave()
+
+        print('============================================')
+        print('Success rate:', successCount, 'out of', N,
+              '('+pc(100*successCount/N)+')')
+        print('Average estate value (today\'s $): ', d(total/N))
+
+    def runMonteCarlo(self, N, frm=rates.FROM, to=rates.TO, myplots=[]):
+        '''
+        Run N simulations using a stochastic sinulation.
+        '''
+        success = 0
+        total = 0
+        for i in range(N):
+            print('--------------------------------------------')
+            print('Running case #', i)
+            self.runOnce('stochastic', 1940, 2022, myplots=myplots)
+            print('Plan success:', self.success)
+            if self.success:
+                success += 1
+
+            # Assume 30% tax on taxable part of estate.
+            estate, factor = self.estate(30)
+            print('Estate: (today\'s $)', d(estate),
+                  ', cum. infl.:', pc(factor))
+            total += estate
+
+        print('============================================')
+        print('Success rate:', success, 'out of', N, '('+pc(100*success/N)+')')
+        print('Average estate value (today\'s $): ', d(total/N))
 
 
 ######################################################################
@@ -1343,6 +1458,7 @@ class geometry:
     Class to make plot not overlapping all on one another on windows.
     '''
     window = 0
+
     def __init__(self):
         pass
 
@@ -1350,9 +1466,10 @@ class geometry:
         if isInJupyter() is False:
             import matplotlib.pyplot as plt
             mgr = plt.get_current_fig_manager()
-            x = (self.window%2)*800
+            x = (self.window % 2)*800
             y = 40 + (self.window*10)
             mgr.window.setGeometry(x, y, 720, 600)
             # print('Setting geometry to:', x, y)
             self.window += 1
+
 
