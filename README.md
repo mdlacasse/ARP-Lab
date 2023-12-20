@@ -19,18 +19,21 @@ ARP Lab relies on a few implicit assumptions:
 - Rates of return provided for the S&P500 include dividends;
 - No investment administration fees have been accounted for;
 - Contributions are assumed to be made at half-year, averaging periodic contributions evenly made through the year.
+- No estate tax calculations are included.
 
 ## Default values
-If one starts a plan with no further specifications,
-ARP Lab has the following default values:
+When a new plan is created, ARP Lab will list all the default assumptions as a reminder that they might need to be changed.
+The default choices include:
 - Assets allocation is 60% S&P500 and 40% corporate bonds for tax-deferred and tax-free savings accounts;
 - Assets allocation is 25% corporate bonds, 55% 10-yeay Treasury bonds, and %25 common assets for taxable investment accounts;
 - Income for surviving spouse will be %60 of the income of the couple;
 - Spousal withdrawals are set to *auto*, allowing coordination between both accounts.
+- Income tax on estate is assumed to be 25% on the taxable portion of the esate.
+
 
 These choices have no particular value, except to provide a default case that one can run for demonstration purposes.
-It is anticipated that you will change these default values by using `set___()` functions. The *jack+jill* notebook contains examples describing how to configure these values
-to match you rown assumptions.
+It is anticipated that you will change these default values by using `set___()` functions. The *jack+jill* notebook contains configuration examples describing how to make these values
+match your own assumptions.
 
 
 ## Requirements
