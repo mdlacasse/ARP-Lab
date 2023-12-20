@@ -29,6 +29,7 @@ The default choices include:
 - Income for surviving spouse will be %60 of the income of the couple;
 - Spousal withdrawals are set to *auto*, allowing coordination between both accounts.
 - Income tax on estate is assumed to be 25% on the taxable portion of the esate.
+- Default rates are average rates over the last 30 years.
 
 
 These choices have no particular value, except to provide a default case that one can run for demonstration purposes.
