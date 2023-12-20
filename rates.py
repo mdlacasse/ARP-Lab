@@ -232,7 +232,7 @@ class rates:
         Default constructor.
         '''
         # Default rates are average over last 30 years.
-        self._defRates = np.array([0.11008387, 0.0736, 0.05028387, 0.02513871])
+        self._defRates = np.array([0.1101, 0.0736, 0.0503, 0.0251])
 
         self.frm = 0
         self.to = len(SP500)
@@ -315,7 +315,7 @@ class rates:
 
         # Assign 4 values at the time.
         for k in range(n):
-            rateSeries[k][:] = self.getRates(first+(k%span))[:]
+            rateSeries[k][:] = self.getRates(first+(k % span))[:]
 
         return rateSeries
 
@@ -379,3 +379,4 @@ class rates:
         srates = np.random.multivariate_normal(self.means, self.covar)
 
         return srates
+

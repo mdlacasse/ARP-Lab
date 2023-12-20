@@ -103,6 +103,10 @@ class Plan:
 
         # Tax rate on taxable portion of estate.
         self.estateTaxRate = 0
+        self.setEstateTaxRate(25)
+
+        self.survivingFraction = 0
+        self.setSurvivingFraction(0.6)
 
         self.y2assetRatios = {}
         self.boundsAR = {}
@@ -142,10 +146,18 @@ class Plan:
         # For windows offets.
         self.window = geometry()
 
+    def setSurvivingFraction(self, fraction):
+        '''
+        Set fraction of income desired for surviving spouse.
+        '''
+        u.vprint('Setting surviving spouse income fraction to', fraction)
+        self.survivingFraction = fraction
+
     def setEstateTaxRate(self, rate):
         '''
         Set the tax rate on the taxable portion of the estate.
         '''
+        u.vprint('Setting estate tax rate to', pc(rate))
         self.estateTaxRate = rate
 
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
@@ -771,7 +783,7 @@ class Plan:
                     depRatio = j
                     filingStatus = 'single'
                     # Reduce target income by 40%.
-                    rawTarget *= 0.6
+                    rawTarget *= self.survivingFraction
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
