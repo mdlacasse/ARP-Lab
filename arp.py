@@ -1413,9 +1413,10 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
     remain -= portion3
 
     if commit:
-        print('WARNING: Short withdrawal of', d(amount),
+        print('WARNING: Withdrawal of', d(amount),
               'in year', year, 'for', names[i])
-        print('Missing', d(remain), 'as all accounts were exhausted!')
+        print('         short of', d(remain), 
+              'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]
 
