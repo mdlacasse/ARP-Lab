@@ -440,7 +440,10 @@ class Plan:
         Transfer fraction of assets from one spouse to the other.
         Spouses can inherit IRA and Roth and treat them as their own.
         '''
+        xfer = self.beneficiary
         other = (late+1) % 2
+        u.vprint('Transfering', xfer[late], 'fraction of',
+                 self.names[late], '\'s wealth to', self.names[other])
         for key in self.y2accounts.keys():
             self.y2accounts[key][year][other] += \
                     self.beneficiary[late] * self.y2accounts[key][year][late]
@@ -772,10 +775,6 @@ class Plan:
                         return self.yyear, self.y2accounts, \
                             self.y2source, self.yincome
 
-                    xfer = self.beneficiary
-                    u.vprint('Transfering', xfer[i], 'fraction of',
-                             self.names[i], '\'s wealth to',
-                             self.names[(i+1) % 2])
                     self.transferWealth(n+1, j)
 
                     # Split becomes binary at death of one spouse.
@@ -950,75 +949,80 @@ class Plan:
         ws = wb.active
         ws.title = 'Income'
 
-        planData = {}
-        planData['year'] = self.yyear[:-1]
-        planData['target income'] = self.yincome['target'][:-1]
-        planData['net income'] = self.yincome['net'][:-1]
-        planData['tax bill'] = self.yincome['taxes'][:-1]
+        rawData = {}
+        rawData['year'] = self.yyear[:-1]
+        rawData['target income'] = self.yincome['target'][:-1]
+        rawData['net income'] = self.yincome['net'][:-1]
+        rawData['taxable income'] = self.yincome['taxable'][:-1]
+        rawData['tax bill'] = self.yincome['taxes'][:-1]
+        rawData['IRMAA bill'] = self.yincome['irmaa'][:-1]
 
         # We need to work by row.
-        df = pd.DataFrame(planData)
+        df = pd.DataFrame(rawData)
         for rows in dataframe_to_rows(df, index=False, header=True):
             ws.append(rows)
 
-        # bold = Font(bold=True)
-        for cell in ws[1] + ws['A']:
-            cell.style = 'Pandas'
+        formatSpreadsheet(ws, 'currency')
 
-        for col in ws.columns:
-            column = col[0].column_letter
-            # col[0].font = bold
-            width = len(str(col[0].value)) + 4
-            ws.column_dimensions[column].width = width
-            if column != 'A':
-                for cell in col:
-                    # cell.style = 'Currency [0]'
-                    cell.number_format = u'$#,##0_);[Red]($#,##0)'
+        # Save rates on a different sheet.
+        ws = wb.create_sheet('Rates')
+        rawData = {}
+        rawData['year'] = self.yyear[:-1]
+        rawData['S&P 500'] = self.rates.transpose()[0][:-1]
+        rawData['Corporate Baa'] = self.rates.transpose()[1][:-1]
+        rawData['T Bonds'] = self.rates.transpose()[2][:-1]
+        rawData['inflation'] = self.rates.transpose()[3][:-1]
 
+        # We need to work by row.
+        df = pd.DataFrame(rawData)
+        for rows in dataframe_to_rows(df, index=False, header=True):
+            ws.append(rows)
+
+        formatSpreadsheet(ws, 'percent')
+
+        # Save sources.
         for i in range(self.count):
-            ws = wb.create_sheet(self.names[i])
-            planData = {}
-            planData['year'] = self.yyear[:-1]
-            planData[self.names[i]+' txbl acc. wrdwl'] = \
+            sname = self.names[i] + '\'s Sources'
+            ws = wb.create_sheet(sname)
+            rawData = {}
+            rawData['year'] = self.yyear[:-1]
+            rawData[self.names[i]+' txbl acc. wrdwl'] = \
                 self.y2source['taxable'].transpose()[i][:-1]
-            planData[self.names[i]+' RMD'] = \
+            rawData[self.names[i]+' RMD'] = \
                 self.y2source['rmd'].transpose()[i][:-1]
-            planData[self.names[i]+' distribution'] = \
+            rawData[self.names[i]+' distribution'] = \
                 self.y2source['dist'].transpose()[i][:-1]
-            planData[self.names[i]+' Roth conversion'] = \
+            rawData[self.names[i]+' Roth conversion'] = \
                 self.y2source['RothX'].transpose()[i][:-1]
-            planData[self.names[i]+' tax-free wdrwl'] = \
+            rawData[self.names[i]+' tax-free wdrwl'] = \
                 self.y2source['tax-free'].transpose()[i][:-1]
-            planData[self.names[i]+' big-ticket items'] = \
+            rawData[self.names[i]+' big-ticket items'] = \
                 self.y2source['bti'].transpose()[i][:-1]
-            df = pd.DataFrame(planData)
+            df = pd.DataFrame(rawData)
             for rows in dataframe_to_rows(df, index=False, header=True):
                 ws.append(rows)
 
-            for cell in ws[1] + ws['A']:
-                cell.style = 'Pandas'
-            for col in ws.columns:
-                column = col[0].column_letter
-                # col[0].style = 'Title'
-                width = len(str(col[0].value)) + 4
-                ws.column_dimensions[column].width = width
-                if column != 'A':
-                    for cell in col:
-                        cell.number_format = u'$#,##0_);[Red]($#,##0)'
+            formatSpreadsheet(ws, 'currency')
 
-        while True:
-            try:
-                fname = 'plan'+'_'+basename+'.xlsx'
-                u.vprint('Saving plan as', fname)
-                wb.save(fname)
-                break
-            except PermissionError:
-                print('Failed to save', fname, '. Permission denied.')
-                key = input('Try again? [Yn] ')
-                if key == 'n':
-                    break
-            except Exception:
-                u.xprint('Unanticipated exception', Exception)
+        # Save account balances.
+        for i in range(self.count):
+            sname = self.names[i] + '\'s Accounts'
+            ws = wb.create_sheet(sname)
+            rawData = {}
+            rawData['year'] = self.yyear[:-1]
+            rawData[self.names[i]+' taxable'] = \
+                self.y2accounts['taxable'].transpose()[i][:-1]
+            rawData[self.names[i]+' tax-deferred'] = \
+                self.y2accounts['tax-deferred'].transpose()[i][:-1]
+            rawData[self.names[i]+' tax-free'] = \
+                self.y2accounts['tax-free'].transpose()[i][:-1]
+            df = pd.DataFrame(rawData)
+            for rows in dataframe_to_rows(df, index=False, header=True):
+                ws.append(rows)
+
+            formatSpreadsheet(ws, 'currency')
+
+        saveWorkbook(wb, basename)
 
     def saveRealizationCSV(self, basename):
         import pandas as pd
@@ -1213,6 +1217,58 @@ def pc(value, f=1):
     '''
     mystr = '{:.'+str(f)+'f}%'
     return mystr.format(value)
+
+
+def formatSpreadsheet(ws, ftype):
+    '''
+    Utility function to beautify spreadsheet.
+    '''
+    if ftype == 'currency':
+        fstring = u'$#,##0_);[Red]($#,##0)'
+    elif ftype == 'percent':
+        fstring = u'#.00%'
+    else:
+        u.xprint('Unknown format:', ftype)
+
+    for cell in ws[1] + ws['A']:
+        cell.style = 'Pandas'
+    for col in ws.columns:
+        column = col[0].column_letter
+        # col[0].style = 'Title'
+        width = len(str(col[0].value)) + 4
+        ws.column_dimensions[column].width = width
+        if column != 'A':
+            for cell in col:
+                cell.number_format = fstring
+
+
+def saveWorkbook(wb, basename, overwrite=False):
+    '''
+    Utility function to save XL workbook.
+    '''
+    import os.path as path
+
+    fname = 'plan'+'_'+basename+'.xlsx'
+
+    if path.isfile(fname):
+        print('File ', fname, ' already exists.')
+        key = input('Overwrite? [Ny] ')
+        if key != 'y':
+            print('Skipping save and returning.')
+            return
+
+    while True:
+        try:
+            u.vprint('Saving plan as', fname)
+            wb.save(fname)
+            break
+        except PermissionError:
+            print('Failed to save', fname, '. Permission denied.')
+            key = input('Try again? [Yn] ')
+            if key == 'n':
+                break
+        except Exception:
+            u.xprint('Unanticipated exception', Exception)
 
 
 def pfReturn(assetRatios, rates, year, who):
@@ -1415,7 +1471,7 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
     if commit:
         print('WARNING: Withdrawal of', d(amount),
               'in year', year, 'for', names[i])
-        print('         short of', d(remain), 
+        print('         short of', d(remain),
               'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]

@@ -18,7 +18,7 @@ ARP Lab relies on a few implicit assumptions:
     2) tax-deferred savings accounts (e.g., 401k, 403b, etc.);
     3) tax-free savings accounts (Roth IRA, Roth 401k, etc.).
 - Single and Married Filing Jointly are currently the only two choices for income tax calculations;
-- Rates of return provided for the S&P500 include dividends;
+- Rates of return provided for the S&P 500 include dividends;
 - No investment administration fees is accounted for;
 - Contributions are assumed to be made at half-year, averaging periodic contributions evenly made through the year.
 - No estate tax calculations are included.
@@ -27,7 +27,7 @@ ARP Lab relies on a few implicit assumptions:
 ## Default values for parameters
 When a new plan is created, ARP Lab will list all the default assumptions as a reminder that they might need to be changed.
 The default choices include:
-- Assets allocation is 60% S&P500 and 40% corporate bonds for tax-deferred and tax-free savings accounts;
+- Assets allocation is 60% S&P 500 and 40% corporate bonds for tax-deferred and tax-free savings accounts;
 - Assets allocation is 25% corporate bonds, 55% 10-yeay Treasury bonds, and %25 common assets for taxable investment accounts;
 - Income for surviving spouse will be %60 of the income of the couple;
 - Spousal withdrawals are set to *auto*, allowing coordination between both accounts.
