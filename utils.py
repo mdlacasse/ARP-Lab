@@ -21,9 +21,11 @@ def setVerbose(val):
     Set verbose to True if you want the module to be chatty.
     '''
     global verbose
+    prevState = verbose
     verbose = val
     # Force the use of the verbose variable through this following call.
     vprint("Setting verbose to", val)
+    return prevState
 
 
 def vprint(*args, **kwargs):

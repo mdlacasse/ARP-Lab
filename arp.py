@@ -145,6 +145,7 @@ class Plan:
         self.success = True
         # For windows offets.
         self.window = geometry()
+        return
 
     def setSurvivingFraction(self, fraction):
         '''
@@ -152,6 +153,7 @@ class Plan:
         '''
         u.vprint('Setting surviving spouse income fraction to', fraction)
         self.survivingFraction = fraction
+        return
 
     def setEstateTaxRate(self, rate):
         '''
@@ -159,6 +161,7 @@ class Plan:
         '''
         u.vprint('Setting estate tax rate to', pc(rate))
         self.estateTaxRate = rate
+        return
 
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
@@ -166,6 +169,7 @@ class Plan:
         for the first horizon year.
         '''
         self.setAR(taxableAR, taxDeferredAR, taxFreeAR, 0)
+        return
 
     def setFinalAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
@@ -173,6 +177,7 @@ class Plan:
         for the last horizon year.
         '''
         self.setAR(taxableAR, taxDeferredAR, taxFreeAR, 1)
+        return
 
     def setAR(self, taxableAR, taxDeferredAR, taxFreeAR, k):
         '''
@@ -201,6 +206,7 @@ class Plan:
         self.boundsAR['taxable'][k] = np.array(taxableAR)/100
         self.boundsAR['tax-deferred'][k] = np.array(taxDeferredAR)/100
         self.boundsAR['tax-free'][k] = np.array(taxFreeAR)/100
+        return
 
     def interpolateAR(self, method='linear'):
         '''
@@ -213,18 +219,19 @@ class Plan:
                     for j in range(4):
                         dat = np.linspace(self.boundsAR[accType][0][who][j],
                                           self.boundsAR[accType][1][who][j],
-                                          self.horizons[who])
-                        for k in range(self.horizons[who]):
+                                          self.horizons[who]+1)
+                        for k in range(self.horizons[who]+1):
                             self.y2assetRatios[accType][k][who][j] = dat[k]
         else:
             u.xprint('Method', method, 'not supported')
 
         u.vprint('Interpolated asset ratios using', method, 'method.')
+        return
 
     def setRates(self, method, frm=rates.FROM, to=rates.TO):
         '''
         Generate rates for return and inflation based on the method and
-        years selected.
+        years selected. Note that last bound is included.
         '''
         dr = rates.rates()
         dr.setMethod(method, frm, to)
@@ -235,6 +242,7 @@ class Plan:
         # No reference to years before today can be done.
         self.rates = dr.genSeries(frm, to, self.maxHorizon)
         # u.vprint('Generated rate series of', len(self.rates))
+        return
 
     def setAssetBalances(self, *, taxable, taxDeferred, taxFree, beneficiary):
         '''
@@ -259,10 +267,12 @@ class Plan:
         u.vprint('Tax-deferred balances:', taxDeferred)
         u.vprint('Tax-free balances:', taxFree)
         u.vprint('Beneficiary:', beneficiary)
+        return
 
     def _initializeAccounts(self):
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
             self.y2accounts[aType][0][:] = self.y2balances[aType]
+        return
 
     # Asset ratios are lists with 3 values: stock, bonds, and fixed assets.
     def setAssetRatiosI(self, *, taxableR, taxDeferredR, taxFreeR):
@@ -290,6 +300,7 @@ class Plan:
         self.taxableR[0] = np.array(taxableR)/100
         self.taxDeferredR[0] = np.array(taxDeferredR)/100
         self.taxFreeR[0] = np.array(taxFreeR)/100
+        return
 
     def testAssetRatios(self, taxableR, taxDeferredR, taxFreeR):
         '''
@@ -306,6 +317,7 @@ class Plan:
             assert (abs(sum(taxableR[i]) - 100) < 0.0000001 and
                     abs(sum(taxDeferredR[i]) - 100) < 0.0000001 and
                     abs(sum(taxFreeR[i]) - 100) < 0.0000001)
+        return
 
     def readContributions(self, filename):
         '''
@@ -329,6 +341,7 @@ class Plan:
         self.names, self.timeLists = readTimeLists(filename, self.count)
 
         checkTimeLists(self.names, self.timeLists, self.horizons)
+        return
 
     def setSpousalSplit(self, split):
         '''
@@ -343,6 +356,7 @@ class Plan:
 
         self.split = split
         u.vprint('Using spousal split of', split)
+        return
 
     def getSplit(self, oldsplit, amount, n, surviving):
         '''
@@ -384,6 +398,7 @@ class Plan:
 
         u.vprint('Using desired net income of', d(income),
                  'with a', profile, 'profile')
+        return
 
     def setPension(self, amounts, ages):
         '''
@@ -396,6 +411,7 @@ class Plan:
         self.pensionAmount = amounts
         self.pensionAge = ages
         u.vprint('Setting pension of', amounts, 'at age(s)', ages)
+        return
 
     def computePension(self, n, i):
         '''
@@ -419,6 +435,7 @@ class Plan:
         self.ssecAmount = amounts
         self.ssecAge = ages
         u.vprint('Setting SSA of', amounts, 'at age(s)', ages)
+        return
 
     def computeSS(self, n, who):
         '''
@@ -448,6 +465,7 @@ class Plan:
             self.y2accounts[key][year][other] += \
                     self.beneficiary[late] * self.y2accounts[key][year][late]
             self.y2accounts[key][year][late] = 0
+        return
 
     def run(self):
         '''
@@ -539,7 +557,7 @@ class Plan:
             u.vprint('-------', self.yyear[n],
                      ' -----------------------------------------------')
 
-            # Tracker for taxable distribution related to big items.
+            # Annual tracker for taxable distribution related to big items.
             btiEvent = 0
             for i in range(self.count):
                 # Is the nth year pass i's life horizon?
@@ -691,7 +709,7 @@ class Plan:
                 ynetIncome[n] = netInc
             else:
                 # Solve amount to withdraw self-consistently.
-                # Try at most thirty times.
+                # Try at most thirty two times.
                 # Typically 10 or less iterations are ok.
                 # Goal is to reconcile withdrawal in after-tax money,
                 # given an existing taxable income.
@@ -701,7 +719,7 @@ class Plan:
                 wdrlRatio = self.getSplit(wdrlRatio, withdrawal,
                                           n+1, surviving)
 
-                for k in range(30):
+                for k in range(32):
                     amounts, total = smartBanking(withdrawal, ya2taxable,
                                                   ya2taxDef, ya2taxFree,
                                                   n+1, wdrlRatio,
@@ -793,7 +811,8 @@ class Plan:
         title = 'Savings Balance'
         types = ['taxable', 'tax-deferred', 'tax-free']
 
-        return self.stackPlot(title, self.y2accounts, types, 'upper left')
+        self.stackPlot(title, self.y2accounts, types, 'upper left')
+        return
 
     def plotSources(self):
         '''
@@ -803,7 +822,8 @@ class Plan:
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
 
-        return self.stackPlot(title, self.y2source, types, 'upper left')
+        self.stackPlot(title, self.y2source, types, 'upper left')
+        return
 
     def stackPlot(self, title, accounts, types, location):
         '''
@@ -842,7 +862,8 @@ class Plan:
         title = 'Net Income vs. Target'
 
         data = {'net': '-', 'target': ':'}
-        return self.lineIncomePlot(data, title)
+        self.lineIncomePlot(data, title)
+        return
 
     def lineIncomePlot(self, data, title):
         '''
@@ -867,7 +888,6 @@ class Plan:
                 tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
 
         # plt.show()
-
         return fig, ax
 
     def plotTaxableIncome(self):
@@ -892,6 +912,7 @@ class Plan:
         plt.grid(visible='both')
         ax.legend(loc='upper left', reverse=True, fontsize=8)
         # ax.legend(loc='upper left')
+        return
 
     def plotTaxes(self):
         '''
@@ -903,8 +924,8 @@ class Plan:
         fig, ax = self.lineIncomePlot(data, title)
 
         # plt.show()
-
-        return fig, ax
+        # return fig, ax
+        return
 
     def plotRates(self):
         '''
@@ -915,7 +936,7 @@ class Plan:
         fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
         title = 'Return & Inflation Rates ('+str(self.rateMethod)
-        if self.rateMethod in ['historical', 'stochastic']:
+        if self.rateMethod in ['historical', 'stochastic', 'average']:
             title += ' '+str(self.rateFrm)+'-'+str(self.rateTo)
         elif self.rateMethod == 'fixed':
             title += str(self.rateMethod)
@@ -936,10 +957,10 @@ class Plan:
         ax.set_ylabel('%')
 
         # plt.show()
+        # return fig, ax
+        return
 
-        return fig, ax
-
-    def saveRealizationXL(self, basename):
+    def saveRealizationXL(self, basename, overwrite):
         import pandas as pd
         from openpyxl import Workbook
         from openpyxl.utils.dataframe import dataframe_to_rows
@@ -954,6 +975,7 @@ class Plan:
         rawData['target income'] = self.yincome['target'][:-1]
         rawData['net income'] = self.yincome['net'][:-1]
         rawData['taxable income'] = self.yincome['taxable'][:-1]
+        rawData['gross taxable'] = self.yincome['gross'][:-1]
         rawData['tax bill'] = self.yincome['taxes'][:-1]
         rawData['IRMAA bill'] = self.yincome['irmaa'][:-1]
 
@@ -1022,7 +1044,7 @@ class Plan:
 
             formatSpreadsheet(ws, 'currency')
 
-        saveWorkbook(wb, basename)
+        saveWorkbook(wb, basename, overwrite)
 
     def saveRealizationCSV(self, basename):
         import pandas as pd
@@ -1101,7 +1123,7 @@ class Plan:
 
         plt.close('all')
 
-    def estate(self, taxRate=None):
+    def _estate(self, taxRate=None):
         '''
         Return estimated post-tax value of total of assets at
         the end of the run in today's $. The tax rate provided
@@ -1123,6 +1145,15 @@ class Plan:
         value = total/div
 
         return value, (div - 1)*100
+
+    def estate(self, taxRate=None):
+        '''
+        Front-end to _estate() function printing numbers in readable format.
+        '''
+        val, percent = self._estate(taxRate)
+
+        print('Estate: (today\'s $)', d(val), 'cum. infl.:', pc(percent))
+        return
 
     def runOnce(self, stype, frm=rates.FROM, to=rates.TO, myplots=[]):
         '''
@@ -1161,7 +1192,7 @@ class Plan:
                 successCount += 1
 
             # Use tax rate provided on taxable part of estate.
-            estate, factor = self.estate(self.estateTaxRate)
+            estate, factor = self._estate(self.estateTaxRate)
             print('Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor))
             total += estate
@@ -1191,8 +1222,8 @@ class Plan:
             if self.success:
                 success += 1
 
-            # Assume 30% tax on taxable part of estate.
-            estate, factor = self.estate(30)
+            # Rely on self.estateTaxRate for rate.
+            estate, factor = self._estate()
             print('Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor))
             total += estate
@@ -1250,7 +1281,7 @@ def saveWorkbook(wb, basename, overwrite=False):
 
     fname = 'plan'+'_'+basename+'.xlsx'
 
-    if path.isfile(fname):
+    if overwrite is False and path.isfile(fname):
         print('File ', fname, ' already exists.')
         key = input('Overwrite? [Ny] ')
         if key != 'y':
@@ -1509,7 +1540,54 @@ def plotRateDistributions(frm=rates.FROM, to=rates.TO):
     return fig, ax
 
 
+def optimizeRoth(p, txrate):
+    '''
+    Determines optimal Roth conversions.
+    '''
+    import copy
+
+    p2 = copy.deepcopy(p)
+    prevState = u.setVerbose(False)
+
+    # Start with zero RothX.
+    for i in range(p2.count):
+        for n in range(p2.horizons[i]):
+            p2.timeLists[i]['Roth X'][n] = 0
+
+    p2.run()
+    basevalue, mul = p2._estate(txrate)
+
+    # Determine Roth conversions providing maximal estate value.
+    maxValue = basevalue
+    bestX = np.zeros((p.maxHorizon, p.count))
+    for i in range(p.count):
+        for n in range(p.horizons[i]):
+            print('Running year', n, 'for', p2.names[i])
+            xmax = int(min(p.y2accounts['tax-deferred'][n][i], 400001))
+            for rothX in range(0, xmax, 2000):
+                p2.timeLists[i]['Roth X'][n] = rothX
+                p2.run()
+                newValue, mul = p2._estate(txrate)
+                if newValue > maxValue:
+                    maxValue = newValue
+                    bestX[n][i] = rothX
+            # Reset to zero or use new value.
+            p2.timeLists[i]['Roth X'][n] = bestX[n][i]
+
+    p2.run()
+    newvalue, mul = p2._estate(txrate)
+    u.setVerbose(prevState)
+
+    print('Estate increased from', d(basevalue), 'to', d(newvalue),
+          '(', d(newvalue - basevalue), ')')
+
+    return p2, bestX
+
+
 def isInJupyter():
+    '''
+    Boolean function determining if we are in interactive Python.
+    '''
     from IPython import get_ipython
 
     try:

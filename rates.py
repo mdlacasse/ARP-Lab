@@ -250,6 +250,7 @@ class rates:
     def setMethod(self, method, frm=FROM, to=TO):
         if method is None or method == 'default':
             self.method = 'fixed'
+            # Convert decimal to percent for reporting.
             u.vprint('Using default fixed rates values: (%)\n',
                      100.*self._defRates)
             self._setFixedRates(self._defRates)
@@ -258,7 +259,7 @@ class rates:
             self.method == 'fixed'
             method = np.array(method, dtype=float)
             u.vprint('Setting rates using fixed values: (%)\n', method)
-            # Convert percent to decimal.
+            # Convert percent to decimal for storing.
             method /= 100.
             self._setFixedRates(method)
             return
@@ -274,6 +275,10 @@ class rates:
             u.vprint('Using', method, 'rates representing data from',
                      frm, 'to', to)
             self._rateMethod = self._histRates
+        elif method == 'average':
+            u.vprint('Using', method, 'rates from', frm, 'to', to)
+            self.means, self.covar = getDistributions(frm, to)
+            self._setFixedRates(self.means)
         elif method == 'stochastic':
             u.vprint('Using', method, 'rates from', frm, 'to', to)
             self._rateMethod = self._stochRates
@@ -286,13 +291,13 @@ class rates:
     def _setFixedRates(self, rates):
         assert len(rates) == 4
         self._myRates = np.array(rates)
+        self._rateMethod = self._fixedRates
 
-    def genSeries(self, frm=FROM, to=TO, n=TO-FROM):
+    def genSeries(self, frm=FROM, to=TO, n=TO-FROM+1):
         '''
         Generate a series of nx4 entries of rates representing S&P500,
         corporate Baa bonds, 10-y treasury bonds, and inflation,
-        respectively. Value 'i' is used to shift the series from
-        the first year requested. If there are less than 'n' entries
+        respectively. If there are less than 'n' entries
         in sub-series selected by 'setMethod()', values will be repeated
         modulo the length of the sub-series.
         '''
@@ -302,16 +307,9 @@ class rates:
         frm -= FROM
         to -= FROM
 
-        # Include bounds in range.
-        if to is None:
-            print('to is None')
-            frm = 0
-            span = 1
-            first = 0
-        else:
-            # Since bounds are inclusive.
-            span = to - frm + 1
-            first = frm
+        # Add one since bounds are inclusive.
+        span = to - frm + 1
+        first = frm
 
         # Assign 4 values at the time.
         for k in range(n):
@@ -319,29 +317,27 @@ class rates:
 
         return rateSeries
 
-    def getRates(self, i):
+    def getRates(self, n):
         '''
         This function is the front-end for getting rate values depending
         on the method and the year range selected.
 
-        Values of 'i' allows to set a starting year for the series
-        allowing to explore risk sequence.
         Index is in array coordinates, i.e., not in year coordinates.
         '''
-        assert (0 <= i and i <= len(SP500))
+        assert (0 <= n and n < len(SP500))
 
-        return self._rateMethod(i)
+        return self._rateMethod(n)
 
-    def _fixedRates(self, i):
+    def _fixedRates(self, n):
         '''
         Return average rates set through setRatesMethod().
         If not specified, default average rates are provided.
         For fixed rates, values are time-independent, and therefore
-        the 'i' argument is ignored.
+        the 'n' argument is ignored.
         '''
         return self._myRates
 
-    def _histRates(self, i):
+    def _histRates(self, n):
         '''
         Return a list of 4 values representing the historical rates
         of stock, Corporate Baa bonds, Treasury bonds, and inflation,
@@ -350,30 +346,22 @@ class rates:
         Reason for using two values is to allow Monte-Carlo simulations
         to start at a different year while cycling though the whole series.
         '''
-        hrates = np.array([SP500[i], BondsBaa[i], TBonds[i], Inflation[i]])
+        hrates = np.array([SP500[n], BondsBaa[n], TBonds[n], Inflation[n]])
 
         # Convert from percent to decimal.
         return hrates/100
 
-    def _stochRates(self, i):
+    def _stochRates(self, n):
         '''
         Return a list of 4 values representing the historical rates
         of stock, Corporate Baa bonds, Treasury bonds, and inflation,
         respectively. Values are pulled from normal distributions
         having the same characteristics as the historical data for
         the range of years selected.
-        For 1928-2022, mean and std-deviations are:
-
-        SP500: 11.506631578947369 19.494020708683514
-        BondsBaa:  6.957578947368422 7.7547925712242405
-        BondsAaa:  5.732000000000001 6.196953512985656
-        TBonds:  4.86842105263158 7.950702096212301
-        Inflation:  3.112315789473685 3.9364045718026226
 
         But these variables need to be looked at together
-        through multvariate analysis.
-        Code below accounts for covariance between stocks, bonds,
-        and inflation.
+        through multivariate analysis. Code below accounts for
+        covariance between stocks, bonds, and inflation.
 
         '''
         srates = np.random.multivariate_normal(self.means, self.covar)
