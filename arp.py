@@ -804,17 +804,17 @@ class Plan:
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
-    def plotAccounts(self):
+    def showAccounts(self):
         '''
         Plot values of savings accounts over time.
         '''
         title = 'Savings Balance'
         types = ['taxable', 'tax-deferred', 'tax-free']
 
-        self.stackPlot(title, self.y2accounts, types, 'upper left')
+        self._stackPlot(title, self.y2accounts, types, 'upper left')
         return
 
-    def plotSources(self):
+    def showSources(self):
         '''
         Plot income over time.
         '''
@@ -822,10 +822,10 @@ class Plan:
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
 
-        self.stackPlot(title, self.y2source, types, 'upper left')
+        self._stackPlot(title, self.y2source, types, 'upper left')
         return
 
-    def stackPlot(self, title, accounts, types, location):
+    def _stackPlot(self, title, accounts, types, location):
         '''
         Core function for stacked plots.
         '''
@@ -844,7 +844,7 @@ class Plan:
 
         ax.stackplot(self.yyear, accountValues.values(),
                      labels=accountValues.keys(), alpha=0.8)
-        ax.legend(loc=location, reverse=True, fontsize=8)
+        ax.legend(loc=location, reverse=True, fontsize=8, ncol=2)
         # ax.legend(loc=location)
         ax.set_title(title)
         ax.set_xlabel('year')
@@ -855,17 +855,17 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def plotNetIncome(self):
+    def showNetIncome(self):
         '''
         Plot net income and target over time.
         '''
         title = 'Net Income vs. Target'
 
         data = {'net': '-', 'target': ':'}
-        self.lineIncomePlot(data, title)
+        self._lineIncomePlot(data, title)
         return
 
-    def lineIncomePlot(self, data, title):
+    def _lineIncomePlot(self, data, title):
         '''
         Core line plotter function.
         '''
@@ -890,16 +890,16 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def plotTaxableIncome(self):
+    def showGrossIncome(self):
         '''
         Plot income tax and taxable income over time horizon.
         '''
         import matplotlib.pyplot as plt
 
-        title = 'Taxable Income vs. Tax Brackets'
+        title = 'Gross Income vs. Tax Brackets'
         data = {'gross': '-'}
 
-        fig, ax = self.lineIncomePlot(data, title)
+        fig, ax = self._lineIncomePlot(data, title)
 
         myyears = np.array([2022, 2025, 2026, 2052])
         tax2428 = np.array([178000, 220000, 205000, 400000])
@@ -914,20 +914,20 @@ class Plan:
         # ax.legend(loc='upper left')
         return
 
-    def plotTaxes(self):
+    def showTaxes(self):
         '''
         Plot income tax paid over time.
         '''
         title = 'Income Tax and IRMAA'
         data = {'irmaa': '-', 'taxes': '-'}
 
-        fig, ax = self.lineIncomePlot(data, title)
+        fig, ax = self._lineIncomePlot(data, title)
 
         # plt.show()
         # return fig, ax
         return
 
-    def plotRates(self):
+    def showRates(self):
         '''
         Plot rate values used over the time horizon.
         '''
@@ -1044,7 +1044,7 @@ class Plan:
 
             formatSpreadsheet(ws, 'currency')
 
-        saveWorkbook(wb, basename, overwrite)
+        _saveWorkbook(wb, basename, overwrite)
 
     def saveRealizationCSV(self, basename):
         import pandas as pd
@@ -1152,7 +1152,8 @@ class Plan:
         '''
         val, percent = self._estate(taxRate)
 
-        print('Estate: (today\'s $)', d(val), 'cum. infl.:', pc(percent))
+        print(self.yyear[-2], 'Estate: (today\'s $)', d(val),
+              ', cum. infl.:', pc(percent), ', tax rate:', pc(taxRate))
         return
 
     def runOnce(self, stype, frm=rates.FROM, to=rates.TO, myplots=[]):
@@ -1164,10 +1165,10 @@ class Plan:
 
         self.run()
 
-        plotDic = {'rates': self.plotRates, 'net income': self.plotNetIncome,
-                   'sources': self.plotSources, 'taxes': self.plotTaxes,
-                   'taxable income': self.plotTaxableIncome,
-                   'accounts': self.plotAccounts
+        plotDic = {'rates': self.showRates, 'net income': self.showNetIncome,
+                   'sources': self.showSources, 'taxes': self.showTaxes,
+                   'gross income': self.showGrossIncome,
+                   'accounts': self.showAccounts
                    }
 
         for pl in myplots:
@@ -1193,8 +1194,8 @@ class Plan:
 
             # Use tax rate provided on taxable part of estate.
             estate, factor = self._estate(self.estateTaxRate)
-            print('Estate: (today\'s $)', d(estate),
-                  ', cum. infl.:', pc(factor))
+            print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
+                  ', cum. infl.:', pc(factor), ', tax rate:', pc(self.estateTaxRate))
             total += estate
             if len(myplots) > 0:
                 # Number of seconds to wait.
@@ -1224,8 +1225,8 @@ class Plan:
 
             # Rely on self.estateTaxRate for rate.
             estate, factor = self._estate()
-            print('Estate: (today\'s $)', d(estate),
-                  ', cum. infl.:', pc(factor))
+            print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
+                  ', cum. infl.:', pc(factor), ', tax rate:', pc(self.estateTaxRate))
             total += estate
 
         print('============================================')
@@ -1273,7 +1274,7 @@ def formatSpreadsheet(ws, ftype):
                 cell.number_format = fstring
 
 
-def saveWorkbook(wb, basename, overwrite=False):
+def _saveWorkbook(wb, basename, overwrite=False):
     '''
     Utility function to save XL workbook.
     '''
@@ -1508,7 +1509,7 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
     return [portion1, portion2, portion3, withdrawal-remain]
 
 
-def plotRateDistributions(frm=rates.FROM, to=rates.TO):
+def showRateDistributions(frm=rates.FROM, to=rates.TO):
     '''
     Plot histograms of the rates distributions.
     '''
