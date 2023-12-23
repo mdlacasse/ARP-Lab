@@ -960,7 +960,7 @@ class Plan:
         # return fig, ax
         return
 
-    def saveRealizationXL(self, basename, overwrite):
+    def saveInstance(self, basename, overwrite):
         import pandas as pd
         from openpyxl import Workbook
         from openpyxl.utils.dataframe import dataframe_to_rows
@@ -1046,7 +1046,7 @@ class Plan:
 
         _saveWorkbook(wb, basename, overwrite)
 
-    def saveRealizationCSV(self, basename):
+    def saveInstanceCSV(self, basename):
         import pandas as pd
 
         planData = {}
@@ -1106,7 +1106,7 @@ class Plan:
             elif key == 's':
                 if filename is None:
                     filename = path.basename(sys.argv[0][:-3])
-                self.saveRealizaionXL(filename)
+                self.saveInstance(filename)
                 break
             elif key == 'x':
                 sys.exit(0)
@@ -1280,7 +1280,7 @@ def _saveWorkbook(wb, basename, overwrite=False):
     '''
     import os.path as path
 
-    fname = 'plan'+'_'+basename+'.xlsx'
+    fname = 'instance'+'_'+basename+'.xlsx'
 
     if overwrite is False and path.isfile(fname):
         print('File ', fname, ' already exists.')
