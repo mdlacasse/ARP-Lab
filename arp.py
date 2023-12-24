@@ -79,14 +79,15 @@ class Plan:
         self.y2ages = self.y2ages.transpose()
         u.vprint('Current ages', self.y2ages[0])
 
-        self.y2balances = {}
+        self.n2balances = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
-            self.y2balances[aType] = np.zeros((self.count))
+            self.n2balances[aType] = np.zeros((self.count))
 
         self.beneficiary = np.ones((2))
 
         self.names = None
         self.timeLists = None
+        self.timeListsFileName = None
 
         # Default value for split between spouse is auto.
         self.split = 'auto'
@@ -105,8 +106,8 @@ class Plan:
         self.estateTaxRate = 0
         self.setEstateTaxRate(25)
 
-        self.survivingFraction = 0
-        self.setSurvivingFraction(0.6)
+        self.survivorFraction = 0
+        self.setSurvivorFraction(0.6)
 
         self.y2assetRatios = {}
         self.boundsAR = {}
@@ -147,18 +148,21 @@ class Plan:
         self.window = geometry()
         return
 
-    def setSurvivingFraction(self, fraction):
+    def setSurvivorFraction(self, fraction):
         '''
-        Set fraction of income desired for surviving spouse.
+        Set fraction of income desired for survivor spouse.
         '''
-        u.vprint('Setting surviving spouse income fraction to', fraction)
-        self.survivingFraction = fraction
+        assert (0 <= fraction and fraction <= 1.)
+        u.vprint('Setting survivor spouse income fraction to', fraction)
+        self.survivorFraction = fraction
         return
 
     def setEstateTaxRate(self, rate):
         '''
         Set the tax rate on the taxable portion of the estate.
         '''
+        assert (0 <= rate and rate <= 100)
+        rate /= 100
         u.vprint('Setting estate tax rate to', pc(rate))
         self.estateTaxRate = rate
         return
@@ -258,9 +262,9 @@ class Plan:
         assert (len(taxFree) == self.count)
         assert (len(beneficiary) == self.count)
 
-        self.y2balances['taxable'][:] = taxable
-        self.y2balances['tax-deferred'][:] = taxDeferred
-        self.y2balances['tax-free'][:] = taxFree
+        self.n2balances['taxable'][:] = taxable
+        self.n2balances['tax-deferred'][:] = taxDeferred
+        self.n2balances['tax-free'][:] = taxFree
         self.beneficiary = beneficiary
 
         u.vprint('Taxable balances:', taxable)
@@ -271,7 +275,7 @@ class Plan:
 
     def _initializeAccounts(self):
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
-            self.y2accounts[aType][0][:] = self.y2balances[aType]
+            self.y2accounts[aType][0][:] = self.n2balances[aType]
         return
 
     # Asset ratios are lists with 3 values: stock, bonds, and fixed assets.
@@ -341,6 +345,7 @@ class Plan:
         self.names, self.timeLists = readTimeLists(filename, self.count)
 
         checkTimeLists(self.names, self.timeLists, self.horizons)
+        self.timeListsFileName = filename
         return
 
     def setSpousalSplit(self, split):
@@ -348,11 +353,9 @@ class Plan:
         Specify ration of withdrawals between spousal accounts.
         Default value is 'auto'.
         '''
-        if type(split) == float:
-            assert (0 <= split and split <= 1)
-
         if split != 'auto':
-            u.xprint('Unknown split keyword:', split)
+            split = float(split)
+            assert (0 <= split and split <= 1)
 
         self.split = split
         u.vprint('Using spousal split of', split)
@@ -800,7 +803,7 @@ class Plan:
                     depRatio = j
                     filingStatus = 'single'
                     # Reduce target income by 40%.
-                    rawTarget *= self.survivingFraction
+                    rawTarget *= self.survivorFraction
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
@@ -1139,12 +1142,12 @@ class Plan:
 
         total = sum(self.y2accounts['taxable'][-2][:])
         total += sum(self.y2accounts['tax-free'][-2][:])
-        total += (1 - taxRate/100)*sum(self.y2accounts['tax-deferred'][-2][:])
+        total += (1 - taxRate)*sum(self.y2accounts['tax-deferred'][-2][:])
 
         div = tx.inflationAdjusted(1., self.maxHorizon-2, self.rates)
         value = total/div
 
-        return value, (div - 1)*100
+        return value, (div - 1)
 
     def estate(self, taxRate=None):
         '''
@@ -1155,6 +1158,66 @@ class Plan:
         print(self.yyear[-2], 'Estate: (today\'s $)', d(val),
               ', cum. infl.:', pc(percent), ', tax rate:', pc(taxRate))
         return
+
+    def _saveConfig(self, fileName):
+        '''
+        Save plan parameters in a configuration file.
+        '''
+        import configparser
+
+        config = configparser.ConfigParser()
+
+        config['Who'] = {'Count': str(self.count),
+                         'Names': ','.join(str(k) for k in self.names)
+                         }
+
+        # Parameters getting one value for each spouse.
+        config['YOB'] = {}
+        config['Life expectancy'] = {}
+        config['Beneficiary'] = {}
+        config['Pension amounts'] = {}
+        config['Pension ages'] = {}
+        config['Ssec amounts'] = {}
+        config['Ssec ages'] = {}
+        config['Asset balances'] = {}
+        config['Initial AR'] = {}
+        config['Final AR'] = {}
+
+        for i in range(self.count):
+            config['YOB'][self.names[i]] = str(self.yob[i])
+            config['Life expectancy'][self.names[i]] = str(self.expectancy[i])
+            config['Beneficiary'][self.names[i]] = str(self.beneficiary[i])
+            config['Pension amounts'][self.names[i]] = \
+                str(self.pensionAmount[i])
+            config['Pension ages'][self.names[i]] = \
+                str(self.pensionAge[i])
+            config['Ssec amounts'][self.names[i]] = str(self.ssecAmount[i])
+            config['Ssec ages'][self.names[i]] = str(self.ssecAge[i])
+            for aType in ['taxable', 'tax-deferred', 'tax-free']:
+                config['Asset balances'][aType+' '+self.names[i]] = \
+                    str(self.n2balances[aType][i])
+                config['Initial AR'][aType+' '+self.names[i]] = \
+                    ','.join(str(100*k) for k in self.boundsAR[aType][0][i])
+                config['Final AR'][aType+' '+self.names[i]] = \
+                    ','.join(str(100*k) for k in self.boundsAR[aType][1][i])
+
+        # Joint parameters.
+        config['Parameters'] = \
+            {'Target': str(self.target),
+             'Profile': str(self.profile),
+             'Estate tax rate': str(100*self.estateTaxRate),
+             'Spousal split': str(self.split),
+             'Survivor fraction': str(self.survivorFraction),
+             'Time lists file name': str(self.timeListsFileName),
+             }
+
+        config['Rates'] = {'Method': str(self.rateMethod),
+                           'From': str(self.rateFrm),
+                           'To': str(self.rateTo)
+                           }
+
+        with open(fileName+'.cfg', 'w') as configfile:
+            config.write(configfile)
 
     def runOnce(self, stype, frm=rates.FROM, to=rates.TO, myplots=[]):
         '''
@@ -1195,7 +1258,8 @@ class Plan:
             # Use tax rate provided on taxable part of estate.
             estate, factor = self._estate(self.estateTaxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  ', cum. infl.:', pc(factor), ', tax rate:', pc(self.estateTaxRate))
+                  ', cum. infl.:', pc(factor),
+                  ', tax rate:', pc(self.estateTaxRate))
             total += estate
             if len(myplots) > 0:
                 # Number of seconds to wait.
@@ -1206,7 +1270,7 @@ class Plan:
 
         print('============================================')
         print('Success rate:', successCount, 'out of', N,
-              '('+pc(100*successCount/N)+')')
+              '('+pc(successCount/N)+')')
         print('Average estate value (today\'s $): ', d(total/N))
 
     def runMonteCarlo(self, N, frm=rates.FROM, to=rates.TO, myplots=[]):
@@ -1226,11 +1290,12 @@ class Plan:
             # Rely on self.estateTaxRate for rate.
             estate, factor = self._estate()
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  ', cum. infl.:', pc(factor), ', tax rate:', pc(self.estateTaxRate))
+                  ', cum. infl.:', pc(factor),
+                  ', tax rate:', pc(self.estateTaxRate))
             total += estate
 
         print('============================================')
-        print('Success rate:', success, 'out of', N, '('+pc(100*success/N)+')')
+        print('Success rate:', success, 'out of', N, '('+pc(success/N)+')')
         print('Average estate value (today\'s $): ', d(total/N))
 
 
@@ -1248,7 +1313,7 @@ def pc(value, f=1):
     Return a string formatting number in percent.
     '''
     mystr = '{:.'+str(f)+'f}%'
-    return mystr.format(value)
+    return mystr.format(100*value)
 
 
 def formatSpreadsheet(ws, ftype):
@@ -1272,6 +1337,100 @@ def formatSpreadsheet(ws, ftype):
         if column != 'A':
             for cell in col:
                 cell.number_format = fstring
+
+
+def savePlan(plan, fileName):
+    '''
+    Save plan configuration parameters to a file.
+    '''
+    u.vprint('Saving plan config as', fileName+'.cfg')
+
+    plan._saveConfig(fileName)
+
+    return
+
+
+def readPlan(fileName):
+    '''
+    Read plan configuration parameters from a file.
+    '''
+    import configparser
+
+    u.vprint('Reading plan config from', fileName+'.cfg')
+
+    config = configparser.ConfigParser()
+    config.read(fileName+'.cfg')
+
+    count = int(config['Who']['Count'])
+    names = config['Who']['Names'].split(',')
+
+    # Parameters getting one value for each spouse.
+    yob = []
+    expectancy = []
+    beneficiary = []
+    pensionAmounts = []
+    pensionAges = []
+    ssecAmounts = []
+    ssecAges = []
+
+    n2balances = {}
+    initialAR = {}
+    finalAR = {}
+    for aType in ['taxable', 'tax-deferred', 'tax-free']:
+        n2balances[aType] = []
+        initialAR[aType] = []
+        finalAR[aType] = []
+
+    for i in range(count):
+        yob.append(int(config['YOB'][names[i]]))
+        expectancy.append(int(config['Life expectancy'][names[i]]))
+        beneficiary.append(float(config['Beneficiary'][names[i]]))
+        pensionAmounts.append(float(config['Pension amounts'][names[i]]))
+        pensionAges.append(int(config['Pension ages'][names[i]]))
+        ssecAmounts.append(int(config['Ssec amounts'][names[i]]))
+        ssecAges.append(int(config['Ssec ages'][names[i]]))
+        for aType in ['taxable', 'tax-deferred', 'tax-free']:
+            n2balances[aType].append(float(config['Asset balances'][aType+' '+names[i]]))
+            initialAR[aType].append(config['Initial AR'][aType+' '+names[i]].split(','))
+            finalAR[aType].append(config['Final AR'][aType+' '+names[i]].split(','))
+
+    # Convert those strings to float.
+    for aType in ['taxable', 'tax-deferred', 'tax-free']:
+        for k in range(len(initialAR[aType])):
+            initialAR[aType][k] = [float(j) for j in initialAR[aType][k]]
+            finalAR[aType][k] = [float(j) for j in finalAR[aType][k]]
+
+    plan = Plan(yob, expectancy)
+    plan.setPension(pensionAmounts, pensionAges)
+    plan.setSocialSecurity(ssecAmounts, ssecAges)
+    plan.setAssetBalances(taxable=n2balances['taxable'],
+                          taxDeferred=n2balances['tax-deferred'],
+                          taxFree=n2balances['tax-free'],
+                          beneficiary=beneficiary)
+
+    plan.setInitialAR(taxableAR=initialAR['taxable'],
+                      taxDeferredAR=initialAR['tax-deferred'],
+                      taxFreeAR=initialAR['tax-free'])
+    plan.setFinalAR(taxableAR=finalAR['taxable'],
+                    taxDeferredAR=finalAR['tax-deferred'],
+                    taxFreeAR=finalAR['tax-free'])
+    plan.interpolateAR()
+
+    plan.setDesiredIncome(float(config['Parameters']['Target']),
+                          config['Parameters']['Profile'])
+    plan.setEstateTaxRate(float(config['Parameters']['Estate tax rate']))
+    plan.setSpousalSplit(config['Parameters']['Spousal split'])
+    plan.setSurvivorFraction(float(config['Parameters']['Survivor fraction']))
+
+    timeListsFileName = config['Parameters']['Time lists file name']
+    plan.readContributions(timeListsFileName)
+
+    method = config['Rates']['Method']
+    frm = int(config['Rates']['From'])
+    to = int(config['Rates']['To'])
+    plan.setRates(method, frm, to)
+
+    return plan
 
 
 def _saveWorkbook(wb, basename, overwrite=False):
