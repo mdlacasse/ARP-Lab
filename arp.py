@@ -714,6 +714,11 @@ class Plan:
                 yirmaa[n] = tx.irmaa(irmaaIncome, filingStatus,
                                      self.yyear[n], self.rates)
                 ynetIncome[n] = netInc
+                u.vprint('Adj. Income:\n Gross taxable:', d(ygrossIncome[n]),
+                         'Tax bill:', d(yincomeTax[n]),
+                         'IRMAA:', d(yirmaa[n]),
+                         '\n Net:', d(ynetIncome[n]),
+                         'Tax free:', d(ytaxfreeIncome[n]))
             else:
                 # Solve amount to withdraw self-consistently.
                 # Try at most thirty two times.
@@ -780,14 +785,13 @@ class Plan:
                 ynetIncome[n] = (ytaxfreeIncome[n] +
                                  ytaxableIncome[n] -
                                  yincomeTax[n])
-                gross = ytaxableIncome[n] + yRothX[n] + btiEvent
-                ygrossIncome[n] = gross
+                ygrossIncome[n] = ytaxableIncome[n] + yRothX[n] + btiEvent
                 # IRMAA looks back 2 years for income.
                 irmaaIncome = ygrossIncome[max(0, n-2)]
                 yirmaa[n] = tx.irmaa(irmaaIncome, filingStatus,
                                      self.yyear[n], self.rates)
                 u.vprint('\t...of which', d(txbl), 'is taxable.')
-                u.vprint('Adj. Income:\n Gross taxable:', d(gross),
+                u.vprint('Adj. Income:\n Gross taxable:', d(ygrossIncome[n]),
                          'Tax bill:', d(yincomeTax[n]),
                          'IRMAA:', d(yirmaa[n]),
                          '\n Net:', d(ynetIncome[n]),
@@ -1293,8 +1297,8 @@ class Plan:
         '''
         Run N simulations using a stochastic sinulation.
         '''
+        estateResults = np.zeros(N)
         success = 0
-        total = 0
         for i in range(N):
             print('--------------------------------------------')
             print('Running case #', i)
@@ -1308,11 +1312,13 @@ class Plan:
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
                   ', tax rate:', pc(self.estateTaxRate))
-            total += estate
+            estateResults[i] = estate
 
         print('============================================')
         print('Success rate:', success, 'out of', N, '('+pc(success/N)+')')
-        print('Average estate value (today\'s $): ', d(total/N))
+        print('Average estate value (today\'s $): ', d(np.mean(estateResults)))
+
+        showHistogram(estateResults)
 
 
 ######################################################################
@@ -1690,6 +1696,25 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
               'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]
+
+
+def showHistogram(data):
+    '''
+    Plot estate results of a Monte Carlo simulation.
+    '''
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as tk
+
+    nbins = int(len(data)/4)
+    fig, ax = plt.subplots(tight_layout=True)
+    ax.set_title('Final Estate')
+    ax.hist(data, bins=nbins)
+    ax.set_ylabel('N')
+    ax.set_xlabel('k$')
+    ax.get_xaxis().set_major_formatter(
+            tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
+
+    plt.show()
 
 
 def showRateDistributions(frm=rates.FROM, to=rates.TO):
