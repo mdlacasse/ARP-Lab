@@ -1128,7 +1128,7 @@ class Plan:
 
         plt.close('all')
 
-    def _estate(self, taxRate=None):
+    def _estate(self, taxRate):
         '''
         Return estimated post-tax value of total of assets at
         the end of the run in today's $. The tax rate provided
@@ -1139,8 +1139,6 @@ class Plan:
         Cumulative inflation factor is returned as well as the
         estate value.
         '''
-        if taxRate is None:
-            taxRate = self.estateTaxRate
 
         total = sum(self.y2accounts['taxable'][-2][:])
         total += sum(self.y2accounts['tax-free'][-2][:])
@@ -1155,6 +1153,11 @@ class Plan:
         '''
         Front-end to _estate() function printing numbers in readable format.
         '''
+        if taxRate is None:
+            taxRate = self.estateTaxRate
+        else:
+            taxRate /= 100
+
         val, percent = self._estate(taxRate)
 
         print(self.yyear[-2], 'Estate: (today\'s $)', d(val),
@@ -1296,7 +1299,7 @@ class Plan:
                 success += 1
 
             # Rely on self.estateTaxRate for rate.
-            estate, factor = self._estate()
+            estate, factor = self._estate(self.estateTaxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
                   ', tax rate:', pc(self.estateTaxRate))
@@ -1724,6 +1727,7 @@ def optimizeRoth(p, txrate):
 
     p2 = copy.deepcopy(p)
     prevState = u.setVerbose(False)
+    txrate /= 100
 
     # Start with zero RothX.
     for i in range(p2.count):
