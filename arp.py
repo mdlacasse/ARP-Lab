@@ -135,6 +135,7 @@ class Plan:
         self.rateMethod = 'default'
         self.rateFrm = None
         self.rateTo = None
+        self.rateValues = None
 
         self.setRates('default')
 
@@ -232,16 +233,17 @@ class Plan:
         u.vprint('Interpolated asset ratios using', method, 'method.')
         return
 
-    def setRates(self, method, frm=rates.FROM, to=rates.TO):
+    def setRates(self, method, frm=rates.FROM, to=rates.TO, values=None):
         '''
         Generate rates for return and inflation based on the method and
         years selected. Note that last bound is included.
         '''
         dr = rates.rates()
-        dr.setMethod(method, frm, to)
+        dr.setMethod(method, frm, to, values)
         self.rateMethod = method
         self.rateFrm = frm
         self.rateTo = to
+        self.rateValues = values
         # Remember that all coded calculations are forward looking.
         # No reference to years before today can be done.
         self.rates = dr.genSeries(frm, to, self.maxHorizon)
@@ -1177,11 +1179,11 @@ class Plan:
         config['Beneficiary'] = {}
         config['Pension amounts'] = {}
         config['Pension ages'] = {}
-        config['Ssec amounts'] = {}
-        config['Ssec ages'] = {}
+        config['Social security amounts'] = {}
+        config['Social security ages'] = {}
         config['Asset balances'] = {}
-        config['Initial AR'] = {}
-        config['Final AR'] = {}
+        config['Initial allocation ratios'] = {}
+        config['Final allocation ratios'] = {}
 
         for i in range(self.count):
             config['YOB'][self.names[i]] = str(self.yob[i])
@@ -1191,15 +1193,17 @@ class Plan:
                 str(self.pensionAmount[i])
             config['Pension ages'][self.names[i]] = \
                 str(self.pensionAge[i])
-            config['Ssec amounts'][self.names[i]] = str(self.ssecAmount[i])
-            config['Ssec ages'][self.names[i]] = str(self.ssecAge[i])
+            config['Social security amounts'][self.names[i]] = \
+                str(self.ssecAmount[i])
+            config['Social security ages'][self.names[i]] = \
+                str(self.ssecAge[i])
             for aType in ['taxable', 'tax-deferred', 'tax-free']:
                 config['Asset balances'][aType+' '+self.names[i]] = \
                     str(self.n2balances[aType][i])
-                config['Initial AR'][aType+' '+self.names[i]] = \
-                    ','.join(str(100*k) for k in self.boundsAR[aType][0][i])
-                config['Final AR'][aType+' '+self.names[i]] = \
-                    ','.join(str(100*k) for k in self.boundsAR[aType][1][i])
+                config['Initial allocation ratios'][aType+' '+self.names[i]] =\
+                    ', '.join(str(100*k) for k in self.boundsAR[aType][0][i])
+                config['Final allocation ratios'][aType+' '+self.names[i]] = \
+                    ', '.join(str(100*k) for k in self.boundsAR[aType][1][i])
 
         # Joint parameters.
         config['Parameters'] = \
@@ -1215,16 +1219,20 @@ class Plan:
                            'From': str(self.rateFrm),
                            'To': str(self.rateTo)
                            }
+        if self.rateMethod == 'fixed':
+            config['Rates']['values'] = \
+                ', '.join(str(k) for k in self.rateValues)
 
         with open(fileName+'.cfg', 'w') as configfile:
             config.write(configfile)
 
-    def runOnce(self, stype, frm=rates.FROM, to=rates.TO, myplots=[]):
+    def runOnce(self, stype, frm=rates.FROM, to=rates.TO,
+                rates=None, myplots=[]):
         '''
         Run one instance of a simulation.
         '''
         self.reset()
-        self.setRates(stype, frm, to)
+        self.setRates(stype, frm, to, rates)
 
         self.run()
 
@@ -1387,12 +1395,15 @@ def readPlan(fileName):
         beneficiary.append(float(config['Beneficiary'][names[i]]))
         pensionAmounts.append(float(config['Pension amounts'][names[i]]))
         pensionAges.append(int(config['Pension ages'][names[i]]))
-        ssecAmounts.append(int(config['Ssec amounts'][names[i]]))
-        ssecAges.append(int(config['Ssec ages'][names[i]]))
+        ssecAmounts.append(int(config['Social security amounts'][names[i]]))
+        ssecAges.append(int(config['Social security ages'][names[i]]))
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
-            n2balances[aType].append(float(config['Asset balances'][aType+' '+names[i]]))
-            initialAR[aType].append(config['Initial AR'][aType+' '+names[i]].split(','))
-            finalAR[aType].append(config['Final AR'][aType+' '+names[i]].split(','))
+            n2balances[aType].append(float(config['Asset balances']
+                                     [aType+' '+names[i]]))
+            initialAR[aType].append(config['Initial allocation ratios']
+                                    [aType+' '+names[i]].split(','))
+            finalAR[aType].append(config['Final allocation ratios']
+                                  [aType+' '+names[i]].split(','))
 
     # Convert those strings to float.
     for aType in ['taxable', 'tax-deferred', 'tax-free']:
@@ -1428,7 +1439,12 @@ def readPlan(fileName):
     method = config['Rates']['Method']
     frm = int(config['Rates']['From'])
     to = int(config['Rates']['To'])
-    plan.setRates(method, frm, to)
+    values = None
+    if method == 'fixed':
+        values = config['Rates']['values'].split(',')
+        values = np.array([float(j) for j in values])
+
+    plan.setRates(method, frm, to, values)
 
     return plan
 

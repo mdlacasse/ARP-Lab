@@ -241,27 +241,29 @@ class rates:
         self._setFixedRates(self._defRates)
 
         # Default values for rates.
-        self.method = 'fixed'
+        self.method = 'default'
         self._rateMethod = self._fixedRates
 
         self.means = np.zeros((4))
         self.covar = np.zeros((4))
 
-    def setMethod(self, method, frm=FROM, to=TO):
-        if method is None or method == 'default':
-            self.method = 'fixed'
+    def setMethod(self, method, frm=FROM, to=TO, values=None):
+        if method == 'default':
+            self.method = 'default'
             # Convert decimal to percent for reporting.
             u.vprint('Using default fixed rates values: (%)\n',
                      100.*self._defRates)
             self._setFixedRates(self._defRates)
             return
-        elif type(method) == list:
+        elif method == 'fixed':
             self.method == 'fixed'
-            method = np.array(method, dtype=float)
-            u.vprint('Setting rates using fixed values: (%)\n', method)
+            if values is None:
+                u.xprint('Rates must be provided with the fixed option.')
+            values = np.array(values, dtype=float)
+            u.vprint('Setting rates using fixed values: (%)\n', values)
             # Convert percent to decimal for storing.
-            method /= 100.
-            self._setFixedRates(method)
+            values /= 100.
+            self._setFixedRates(values)
             return
 
         assert (FROM <= frm and frm <= TO)
@@ -330,8 +332,7 @@ class rates:
 
     def _fixedRates(self, n):
         '''
-        Return average rates set through setRatesMethod().
-        If not specified, default average rates are provided.
+        Return rates provided.
         For fixed rates, values are time-independent, and therefore
         the 'n' argument is ignored.
         '''
