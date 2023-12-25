@@ -709,7 +709,9 @@ class Plan:
                              depRatio, self.names, True)
                 yincomeTax[n] = estimatedTax
                 ygrossIncome[n] = gross
-                yirmaa[n] = tx.irmaa(gross, filingStatus,
+                # IRMAA looks back 2 years.
+                irmaaIncome = ygrossIncome[max(0, n-2)]
+                yirmaa[n] = tx.irmaa(irmaaIncome, filingStatus,
                                      self.yyear[n], self.rates)
                 ynetIncome[n] = netInc
             else:
@@ -780,11 +782,14 @@ class Plan:
                                  yincomeTax[n])
                 gross = ytaxableIncome[n] + yRothX[n] + btiEvent
                 ygrossIncome[n] = gross
-                yirmaa[n] = tx.irmaa(gross, filingStatus,
+                # IRMAA looks back 2 years for income.
+                irmaaIncome = ygrossIncome[max(0, n-2)]
+                yirmaa[n] = tx.irmaa(irmaaIncome, filingStatus,
                                      self.yyear[n], self.rates)
                 u.vprint('\t...of which', d(txbl), 'is taxable.')
                 u.vprint('Adj. Income:\n Gross taxable:', d(gross),
                          'Tax bill:', d(yincomeTax[n]),
+                         'IRMAA:', d(yirmaa[n]),
                          '\n Net:', d(ynetIncome[n]),
                          'Tax free:', d(ytaxfreeIncome[n]))
 

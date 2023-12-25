@@ -40,12 +40,11 @@ def inflationAdjusted(base, year, rates, refIndex=0):
 
     fac = 1
     if type(rates) == float:
-        # sign will take care of division.
+        # Sign will take care of division.
         fac *= (1 + rates)**(index - refIndex)
     elif index >= refIndex:
         for i in range(refIndex, index):
             fac *= (1 + rates[i][3])
-            # print('--->', i, rates[i][3], fac)
     else:
         for i in range(index, refIndex):
             fac /= (1 + rates[i][3])
@@ -56,7 +55,9 @@ def inflationAdjusted(base, year, rates, refIndex=0):
 def irmaa(magi, filingStatus, year, rates):
     '''
     Return inflation-adjusted annual irmaa costs for Part B
-    premium with magi and filing status provided.
+    premium with magi and filing status provided. The magi
+    to be used is the gross income from 2 years ago, while
+    the rates for adjustments are for the current time.
     '''
 
     table2023_MFJ = {194000: 0, 246000: 2769.60, 306000: 3956.40,
@@ -69,7 +70,7 @@ def irmaa(magi, filingStatus, year, rates):
     elif filingStatus == 'single':
         table = table2023_S
     else:
-        u.xprint('In irmaa function: Unknown status', filingStatus)
+        u.xprint('In irmaa function: Unknown filing status', filingStatus)
 
     for bracket in table:
         if magi < inflationAdjusted(bracket, year, rates):
