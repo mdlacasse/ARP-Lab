@@ -109,7 +109,7 @@ class Plan:
         self.survivorFraction = 0
         self.setSurvivorFraction(0.6)
 
-        self.coordinateAR = False
+        self.coordinatedAR = 'none'
         self.y2assetRatios = {}
         self.boundsAR = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free', 'coordinated']:
@@ -247,7 +247,7 @@ class Plan:
                 self.boundsAR['coordinated'][0][i] = np.array(initialAR)/100
                 self.boundsAR['coordinated'][1][i] = np.array(finalAR)/100
         else:
-            u.xprint('Unknown scope:', scope)
+            u.xprint('Lists provided have wrong length:', len(initialAR))
 
         self.coordinatedAR = scope
         u.vprint('Coordinating', scope, 'assets allocation ratios (%):\n',
@@ -298,10 +298,9 @@ class Plan:
         '''
         Coordinate assets allocation ratios amongst different accounts.
         '''
-        if self.coordinateAR == 'none':
+        if self.coordinatedAR == 'none':
             return
-
-        if self.coordinatedAR == 'individual':
+        elif self.coordinatedAR == 'individual':
             for who in range(self.count):
                 if n > self.horizons[who]:
                     continue
