@@ -42,7 +42,8 @@ The default choices include:
 These choices have no particular value, except to provide a default case that one can run for demonstration purposes.
 It is anticipated that you will change these default values by using `set___()` functions. The *jack+jill* notebook contains configuration examples describing how to make these values
 match your own assumptions. These include the following calls:
-    `setInitialAR()`, `setFinalAR()`, `setSurvivingFraction()`, `setSpousalSplit()`, `setEstateTaxRate()`,  `setRates()`, for examples.
+    `setInitialAR()`, `setFinalAR()`, `setSurvivorFraction()`, `setSpousalSplit()`, `setEstateTaxRate()`,  `setRates()`, for examples.
+
 
 ## Requirements to run this program
 ARP Lab is coded in Python and is best run using either the *jupyterlab* or *jupyter* notebook. Therefore, I recommend installing *Anaconda* on your computer. It can be found at anaconda.com. Follow the instruction on the web site to install anaconda on your computer.

@@ -109,9 +109,10 @@ class Plan:
         self.survivorFraction = 0
         self.setSurvivorFraction(0.6)
 
+        self.coordinateAR = False
         self.y2assetRatios = {}
         self.boundsAR = {}
-        for aType in ['taxable', 'tax-deferred', 'tax-free']:
+        for aType in ['taxable', 'tax-deferred', 'tax-free', 'coordinated']:
             self.y2assetRatios[aType] = \
                     np.zeros((self.maxHorizon, self.count, 4))
             self.boundsAR[aType] = np.zeros((2, self.count, 4))
@@ -119,9 +120,9 @@ class Plan:
         # Set default values on bounds.
         u.vprint('Using default values for assets allocation ratios.')
         for k in 0, 1:
-            self.setAR([[0, 25, 50, 25], [0, 25, 50, 25]],
-                       [[60, 40, 0, 0], [60, 40, 0, 0]],
-                       [[60, 40, 0, 0], [60, 40, 0, 0]], k)
+            self._setAR([[0, 25, 50, 25], [0, 25, 50, 25]],
+                        [[60, 40, 0, 0], [60, 40, 0, 0]],
+                        [[60, 40, 0, 0], [60, 40, 0, 0]], k)
 
         self.interpolateAR()
 
@@ -156,6 +157,7 @@ class Plan:
         assert (0 <= fraction and fraction <= 1.)
         u.vprint('Setting survivor spouse income fraction to', fraction)
         self.survivorFraction = fraction
+
         return
 
     def setEstateTaxRate(self, rate):
@@ -166,28 +168,31 @@ class Plan:
         rate /= 100
         u.vprint('Setting estate tax rate to', pc(rate))
         self.estateTaxRate = rate
+
         return
 
     def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
-        Set values of asset distribution in each of the accounts
+        Set values of assets allocation ratios in each of the accounts
         for the first horizon year.
         '''
-        self.setAR(taxableAR, taxDeferredAR, taxFreeAR, 0)
+        self._setAR(taxableAR, taxDeferredAR, taxFreeAR, 0)
+
         return
 
     def setFinalAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
         '''
-        Set values of asset distribution in each of the accounts
+        Set values of assets allocation ratios in each of the accounts
         for the last horizon year.
         '''
-        self.setAR(taxableAR, taxDeferredAR, taxFreeAR, 1)
+        self._setAR(taxableAR, taxDeferredAR, taxFreeAR, 1)
+
         return
 
-    def setAR(self, taxableAR, taxDeferredAR, taxFreeAR, k):
+    def _setAR(self, taxableAR, taxDeferredAR, taxFreeAR, k):
         '''
         Utility function for setting initial time and final time values
-        on asset ratios.
+        on assets allocation ratios.
         '''
         # Make sure we have proper entries.
         assert len(taxableAR) == self.count
@@ -206,31 +211,138 @@ class Plan:
 
         which = ['Initial', 'Final'][k]
 
-        u.vprint(which, 'asset ratios set to: (%)\n', taxableAR,
+        u.vprint(which, 'assets allocation ratios set to: (%)\n', taxableAR,
                  '\n', taxDeferredAR, '\n', taxFreeAR)
         self.boundsAR['taxable'][k] = np.array(taxableAR)/100
         self.boundsAR['tax-deferred'][k] = np.array(taxDeferredAR)/100
         self.boundsAR['tax-free'][k] = np.array(taxFreeAR)/100
+        self.coordinatedAR = 'none'
+
+        return
+
+    def setCoordinatedAR(self, *, initialAR, finalAR):
+        '''
+        Set bounds for portfolios coordinated between assets and spouses.
+        Scope of coordination is taken from size of arrays.
+        '''
+        if len(initialAR) == self.count:
+            scope = 'individual'
+            assert len(finalAR) == self.count
+
+            for i in range(self.count):
+                assert len(initialAR[i]) == 4
+                assert len(finalAR[i]) == 4
+                assert abs(sum(initialAR[i]) - 100) < 0.01
+                assert abs(sum(finalAR[i]) - 100) < 0.01
+
+            self.boundsAR['coordinated'][0] = np.array(initialAR)/100
+            self.boundsAR['coordinated'][1] = np.array(finalAR)/100
+        elif len(initialAR) == 4:
+            scope = 'both'
+            assert len(finalAR) == 4
+            assert abs(sum(initialAR) - 100) < 0.01
+            assert abs(sum(finalAR) - 100) < 0.01
+
+            for i in range(self.count):
+                self.boundsAR['coordinated'][0][i] = np.array(initialAR)/100
+                self.boundsAR['coordinated'][1][i] = np.array(finalAR)/100
+        else:
+            u.xprint('Unknown scope:', scope)
+
+        self.coordinatedAR = scope
+        u.vprint('Coordinating', scope, 'assets allocation ratios (%):\n',
+                 'initial:', initialAR, '\n  final:', finalAR)
+
         return
 
     def interpolateAR(self, method='linear'):
         '''
-        Interpolate asset ratio from initial value (today) to
-        final value (at the end of horizon.
+        Interpolate assets allocation ratios from initial value (today) to
+        final value (at the end of horizon).
         '''
         if method == 'linear':
-            for accType in ['taxable', 'tax-deferred', 'tax-free']:
-                for who in range(self.count):
-                    for j in range(4):
-                        dat = np.linspace(self.boundsAR[accType][0][who][j],
-                                          self.boundsAR[accType][1][who][j],
-                                          self.horizons[who]+1)
-                        for k in range(self.horizons[who]+1):
-                            self.y2assetRatios[accType][k][who][j] = dat[k]
+            # Use longest-lived spouse for time scale.
+            if self.coordinatedAR == 'both':
+                accType = 'coordinated'
+                horizon = [self.maxHorizon - 2]
+                self._interp(accType, 1, horizon)
+            elif self.coordinatedAR == 'individual':
+                accType = 'coordinated'
+                self._interp(accType, self.count, self.horizons)
+            else:
+                for accType in ['taxable', 'tax-deferred', 'tax-free']:
+                    self._interp(accType, self.count, self.horizons)
         else:
-            u.xprint('Method', method, 'not supported')
+            u.xprint('Method', method, 'not supported.')
 
-        u.vprint('Interpolated asset ratios using', method, 'method.')
+        u.vprint('Interpolated assets allocation ratios using',
+                 method, 'method.')
+
+        return
+
+    def _interp(self, accType, count, upperN):
+        '''
+        Utility function to interpolate multiple cases.
+        '''
+        for who in range(count):
+            for j in range(4):
+                dat = np.linspace(self.boundsAR[accType][0][who][j],
+                                  self.boundsAR[accType][1][who][j],
+                                  upperN[who]+1)
+                for n in range(upperN[who]+1):
+                    self.y2assetRatios[accType][n][who][j] = dat[n]
+
+        return
+
+    def balanceAR(self, n):
+        '''
+        Coordinate assets allocation ratios amongst different accounts.
+        '''
+        if self.coordinateAR == 'none':
+            return
+
+        if self.coordinatedAR == 'individual':
+            for who in range(self.count):
+                if n > self.horizons[who]:
+                    continue
+                c = self.y2assetRatios['coordinated'][n][who]
+                X = self.y2accounts['taxable'][n][who]
+                Y = self.y2accounts['tax-deferred'][n][who]
+                Z = self.y2accounts['tax-free'][n][who]
+
+                x, y, z, = _balance(c, X, Y, Z)
+                T = (X + Y + Z + 0.01)
+                u.vprint('Global assets allocation:',
+                         pc((X*x[0] + Y*y[0] + Z*z[0])/T),
+                         pc((X*x[1] + Y*y[1] + Z*z[1])/T),
+                         pc((X*x[2] + Y*y[2] + Z*z[2])/T),
+                         pc((X*x[3] + Y*y[3] + Z*z[3])/T))
+
+                self.y2assetRatios['taxable'][n][who] = x
+                self.y2assetRatios['tax-deferred'][n][who] = y
+                self.y2assetRatios['tax-free'][n][who] = z
+        elif self.coordinatedAR == 'both':
+            c = self.y2assetRatios['coordinated'][n][0]
+            X = sum(self.y2accounts['taxable'][n])
+            Y = sum(self.y2accounts['tax-deferred'][n])
+            Z = sum(self.y2accounts['tax-free'][n])
+
+            x, y, z = _balance(c, X, Y, Z)
+            T = (X + Y + Z + 0.01)
+            # print('both AR:', x, y, z)
+            u.vprint('Global assets allocation:',
+                     pc((X*x[0] + Y*y[0] + Z*z[0])/T),
+                     pc((X*x[1] + Y*y[1] + Z*z[1])/T),
+                     pc((X*x[2] + Y*y[2] + Z*z[2])/T),
+                     pc((X*x[3] + Y*y[3] + Z*z[3])/T))
+
+            for who in range(self.count):
+                self.y2assetRatios['taxable'][n][who] = x
+                self.y2assetRatios['tax-deferred'][n][who] = y
+                self.y2assetRatios['tax-free'][n][who] = z
+        else:
+            u.xprint('Unknown coordination keyword:', self.coordinatedAR)
+
         return
 
     def setRates(self, method, frm=rates.FROM, to=rates.TO, values=None):
@@ -248,6 +360,7 @@ class Plan:
         # No reference to years before today can be done.
         self.rates = dr.genSeries(frm, to, self.maxHorizon)
         # u.vprint('Generated rate series of', len(self.rates))
+
         return
 
     def setAssetBalances(self, *, taxable, taxDeferred, taxFree, beneficiary):
@@ -273,11 +386,13 @@ class Plan:
         u.vprint('Tax-deferred balances:', taxDeferred)
         u.vprint('Tax-free balances:', taxFree)
         u.vprint('Beneficiary:', beneficiary)
+
         return
 
     def _initializeAccounts(self):
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
             self.y2accounts[aType][0][:] = self.n2balances[aType]
+
         return
 
     # Asset ratios are lists with 3 values: stock, bonds, and fixed assets.
@@ -306,6 +421,7 @@ class Plan:
         self.taxableR[0] = np.array(taxableR)/100
         self.taxDeferredR[0] = np.array(taxDeferredR)/100
         self.taxFreeR[0] = np.array(taxFreeR)/100
+
         return
 
     def testAssetRatios(self, taxableR, taxDeferredR, taxFreeR):
@@ -323,6 +439,7 @@ class Plan:
             assert (abs(sum(taxableR[i]) - 100) < 0.0000001 and
                     abs(sum(taxDeferredR[i]) - 100) < 0.0000001 and
                     abs(sum(taxFreeR[i]) - 100) < 0.0000001)
+
         return
 
     def readContributions(self, filename):
@@ -348,6 +465,7 @@ class Plan:
 
         checkTimeLists(self.names, self.timeLists, self.horizons)
         self.timeListsFileName = filename
+
         return
 
     def setSpousalSplit(self, split):
@@ -361,6 +479,7 @@ class Plan:
 
         self.split = split
         u.vprint('Using spousal split of', split)
+
         return
 
     def getSplit(self, oldsplit, amount, n, surviving):
@@ -403,6 +522,7 @@ class Plan:
 
         u.vprint('Using desired net income of', d(income),
                  'with a', profile, 'profile')
+
         return
 
     def setPension(self, amounts, ages):
@@ -416,6 +536,7 @@ class Plan:
         self.pensionAmount = amounts
         self.pensionAge = ages
         u.vprint('Setting pension of', amounts, 'at age(s)', ages)
+
         return
 
     def computePension(self, n, i):
@@ -427,7 +548,7 @@ class Plan:
         if self.y2ages[n][i] >= refAge:
             return self.pensionAmount[i]
 
-        return 0
+        return 0.
 
     def setSocialSecurity(self, amounts, ages):
         '''
@@ -440,6 +561,7 @@ class Plan:
         self.ssecAmount = amounts
         self.ssecAge = ages
         u.vprint('Setting SSA of', amounts, 'at age(s)', ages)
+
         return
 
     def computeSS(self, n, who):
@@ -470,6 +592,7 @@ class Plan:
             self.y2accounts[key][year][other] += \
                     self.beneficiary[late] * self.y2accounts[key][year][late]
             self.y2accounts[key][year][late] = 0
+
         return
 
     def run(self):
@@ -562,6 +685,9 @@ class Plan:
             u.vprint('-------', self.yyear[n],
                      ' -----------------------------------------------')
 
+            # Balance portfolio with desired assets allocations.
+            self.balanceAR(n)
+
             # Annual tracker for taxable distribution related to big items.
             btiEvent = 0
             for i in range(self.count):
@@ -598,7 +724,7 @@ class Plan:
 
                 # Add contributions and growth to taxable account.
                 # Year-end growth assumes contributions are in midyear.
-                # Use += for next year to avoid overwriting inheritance.
+                # Use += to avoid overwriting spousal inheritance.
                 # Else, arrays were initialized to zero.
                 ctrb = self.timeLists[i]['ctrb taxable'][n]
                 growth = (ya2taxable[n][i] + 0.5*ctrb) * \
@@ -818,6 +944,29 @@ class Plan:
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
+    def showAssetsAllocations(self):
+        '''
+        Plot allocation of savings accounts over time.
+        '''
+
+        y2stack = {}
+        assetDic = {'stocks': 0, 'C bonds': 1, 'T bonds': 2, 'common': 3}
+        for acType in ['taxable', 'tax-deferred', 'tax-free']:
+            stackNames = []
+            for key in assetDic:
+                name = key+' / '+acType
+                stackNames.append(name)
+                y2stack[name] = np.zeros((self.count, self.maxHorizon))
+                for i in range(self.count):
+                    y2stack[name][i][:] = self.y2accounts[acType].transpose()[i][:]\
+                            * self.y2assetRatios[acType].transpose(1, 2, 0)[i][assetDic[key]][:]
+                y2stack[name] = y2stack[name].transpose()
+
+            title = 'Assets Allocations - '+acType
+            self._stackPlot(title, y2stack, stackNames, 'upper left')
+
+        return
+
     def showAccounts(self):
         '''
         Plot values of savings accounts over time.
@@ -826,6 +975,7 @@ class Plan:
         types = ['taxable', 'tax-deferred', 'tax-free']
 
         self._stackPlot(title, self.y2accounts, types, 'upper left')
+
         return
 
     def showSources(self):
@@ -837,6 +987,7 @@ class Plan:
                  'div', 'taxable', 'tax-free']
 
         self._stackPlot(title, self.y2source, types, 'upper left')
+
         return
 
     def _stackPlot(self, title, accounts, types, location):
@@ -853,7 +1004,7 @@ class Plan:
         for aType in types:
             for i in range(self.count):
                 tmp = accounts[aType].transpose()[i]
-                if sum(tmp) > 0:
+                if sum(tmp) > 0.01:
                     accountValues[aType+' '+self.names[i]] = tmp
 
         ax.stackplot(self.yyear, accountValues.values(),
@@ -877,6 +1028,7 @@ class Plan:
 
         data = {'net': '-', 'target': ':'}
         self._lineIncomePlot(data, title)
+
         return
 
     def _lineIncomePlot(self, data, title):
@@ -926,6 +1078,7 @@ class Plan:
         plt.grid(visible='both')
         ax.legend(loc='upper left', reverse=True, fontsize=8)
         # ax.legend(loc='upper left')
+
         return
 
     def showTaxes(self):
@@ -986,12 +1139,15 @@ class Plan:
 
         rawData = {}
         rawData['year'] = self.yyear[:-1]
-        rawData['target income'] = self.yincome['target'][:-1]
-        rawData['net income'] = self.yincome['net'][:-1]
-        rawData['taxable income'] = self.yincome['taxable'][:-1]
-        rawData['gross taxable'] = self.yincome['gross'][:-1]
-        rawData['tax bill'] = self.yincome['taxes'][:-1]
-        rawData['IRMAA bill'] = self.yincome['irmaa'][:-1]
+        incDic = {'target income': 'target',
+                  'net income': 'net',
+                  'taxable income': 'taxable',
+                  'gross income': 'gross',
+                  'tax bill': 'taxes',
+                  'IRMAA bill': 'irmaa'
+                  }
+        for key in incDic:
+            rawData[key] = self.yincome[incDic[key]][:-1]
 
         # We need to work by row.
         df = pd.DataFrame(rawData)
@@ -1004,36 +1160,38 @@ class Plan:
         ws = wb.create_sheet('Rates')
         rawData = {}
         rawData['year'] = self.yyear[:-1]
-        rawData['S&P 500'] = self.rates.transpose()[0][:-1]
-        rawData['Corporate Baa'] = self.rates.transpose()[1][:-1]
-        rawData['T Bonds'] = self.rates.transpose()[2][:-1]
-        rawData['inflation'] = self.rates.transpose()[3][:-1]
+        ratesDic = {'S&P 500': 0, 'Corporate Baa': 1,
+                    'T Bonds': 2, 'inflation': 3
+                    }
+
+        for key in ratesDic:
+            rawData[key] = self.rates.transpose()[ratesDic[key]][:-1]
 
         # We need to work by row.
         df = pd.DataFrame(rawData)
         for rows in dataframe_to_rows(df, index=False, header=True):
             ws.append(rows)
 
-        formatSpreadsheet(ws, 'percent')
+        formatSpreadsheet(ws, 'percent2')
 
         # Save sources.
+        srcDic = {'txbl acc. wdrwl': 'taxable',
+                  'RMD': 'rmd',
+                  'distribution': 'dist',
+                  'Roth conversion': 'RothX',
+                  'tax-free wdrwl': 'tax-free',
+                  'big-ticket items': 'bti'
+                  }
+
         for i in range(self.count):
             sname = self.names[i] + '\'s Sources'
             ws = wb.create_sheet(sname)
             rawData = {}
             rawData['year'] = self.yyear[:-1]
-            rawData[self.names[i]+' txbl acc. wrdwl'] = \
-                self.y2source['taxable'].transpose()[i][:-1]
-            rawData[self.names[i]+' RMD'] = \
-                self.y2source['rmd'].transpose()[i][:-1]
-            rawData[self.names[i]+' distribution'] = \
-                self.y2source['dist'].transpose()[i][:-1]
-            rawData[self.names[i]+' Roth conversion'] = \
-                self.y2source['RothX'].transpose()[i][:-1]
-            rawData[self.names[i]+' tax-free wdrwl'] = \
-                self.y2source['tax-free'].transpose()[i][:-1]
-            rawData[self.names[i]+' big-ticket items'] = \
-                self.y2source['bti'].transpose()[i][:-1]
+            for key in srcDic:
+                rawData[self.names[i]+' '+key] = \
+                    self.y2source[srcDic[key]].transpose()[i][:-1]
+
             df = pd.DataFrame(rawData)
             for rows in dataframe_to_rows(df, index=False, header=True):
                 ws.append(rows)
@@ -1046,19 +1204,38 @@ class Plan:
             ws = wb.create_sheet(sname)
             rawData = {}
             rawData['year'] = self.yyear[:-1]
-            rawData[self.names[i]+' taxable'] = \
-                self.y2accounts['taxable'].transpose()[i][:-1]
-            rawData[self.names[i]+' tax-deferred'] = \
-                self.y2accounts['tax-deferred'].transpose()[i][:-1]
-            rawData[self.names[i]+' tax-free'] = \
-                self.y2accounts['tax-free'].transpose()[i][:-1]
+            for acType in ['taxable', 'tax-deferred', 'tax-free']:
+                rawData[self.names[i]+' '+acType] = \
+                    self.y2accounts[acType].transpose()[i][:-1]
             df = pd.DataFrame(rawData)
             for rows in dataframe_to_rows(df, index=False, header=True):
                 ws.append(rows)
 
             formatSpreadsheet(ws, 'currency')
 
+        # Save assets allocation ratios.
+        astDic = {'S&P 500': 0, 'Corporate Baa': 1,
+                  'T Bonds': 2, 'Common assets': 3
+                  }
+        for i in range(self.count):
+            sname = self.names[i] + '\'s AR'
+            ws = wb.create_sheet(sname)
+            rawData = {}
+            rawData['year'] = self.yyear[:-1]
+            for acType in ['taxable', 'tax-deferred', 'tax-free']:
+                for ast in astDic:
+                    rawData[ast+' / '+self.names[i]+' '+acType] = \
+                        self.y2assetRatios[acType].transpose(1, 2, 0)[i][astDic[ast]][:-1]
+
+            df = pd.DataFrame(rawData)
+            for rows in dataframe_to_rows(df, index=False, header=True):
+                ws.append(rows)
+
+            formatSpreadsheet(ws, 'percent0')
+
         _saveWorkbook(wb, basename, overwrite)
+
+        return
 
     def saveInstanceCSV(self, basename):
         import pandas as pd
@@ -1102,6 +1279,8 @@ class Plan:
             except Exception:
                 u.xprint('Unanticipated exception', Exception)
 
+        return
+
     def showAndSave(self, filename=None):
         '''
         Final statement for scripts desiring to save events in excel file.
@@ -1125,6 +1304,8 @@ class Plan:
             elif key == 'x':
                 sys.exit(0)
 
+        return
+
     def show(self, pause=2, block=False):
         '''
         Use to show graphs between runs.
@@ -1136,6 +1317,8 @@ class Plan:
             plt.pause(pause)
 
         plt.close('all')
+
+        return
 
     def _estate(self, taxRate):
         '''
@@ -1171,6 +1354,7 @@ class Plan:
 
         print(self.yyear[-2], 'Estate: (today\'s $)', d(val),
               ', cum. infl.:', pc(percent), ', tax rate:', pc(taxRate))
+
         return
 
     def _saveConfig(self, fileName):
@@ -1197,6 +1381,11 @@ class Plan:
         config['Initial allocation ratios'] = {}
         config['Final allocation ratios'] = {}
 
+        if self.coordinatedAR == 'none':
+            listAR = ['taxable', 'tax-deferred', 'tax-free']
+        else:
+            listAR = ['coordinated']
+
         for i in range(self.count):
             config['YOB'][self.names[i]] = str(self.yob[i])
             config['Life expectancy'][self.names[i]] = str(self.expectancy[i])
@@ -1212,6 +1401,7 @@ class Plan:
             for aType in ['taxable', 'tax-deferred', 'tax-free']:
                 config['Asset balances'][aType+' '+self.names[i]] = \
                     str(self.n2balances[aType][i])
+            for aType in listAR:
                 config['Initial allocation ratios'][aType+' '+self.names[i]] =\
                     ', '.join(str(100*k) for k in self.boundsAR[aType][0][i])
                 config['Final allocation ratios'][aType+' '+self.names[i]] = \
@@ -1225,6 +1415,7 @@ class Plan:
              'Spousal split': str(self.split),
              'Survivor fraction': str(self.survivorFraction),
              'Time lists file name': str(self.timeListsFileName),
+             'Coordinated allocations': str(self.coordinatedAR)
              }
 
         config['Rates'] = {'Method': str(self.rateMethod),
@@ -1237,6 +1428,8 @@ class Plan:
 
         with open(fileName+'.cfg', 'w') as configfile:
             config.write(configfile)
+
+        return
 
     def runOnce(self, stype, frm=rates.FROM, to=rates.TO,
                 rates=None, myplots=[]):
@@ -1293,6 +1486,8 @@ class Plan:
               '('+pc(successCount/N)+')')
         print('Average estate value (today\'s $): ', d(total/N))
 
+        return
+
     def runMonteCarlo(self, N, frm=rates.FROM, to=rates.TO, myplots=[]):
         '''
         Run N simulations using a stochastic sinulation.
@@ -1315,10 +1510,14 @@ class Plan:
             estateResults[i] = estate
 
         print('============================================')
-        print('Success rate:', success, 'out of', N, '('+pc(success/N)+')')
-        print('Average estate value (today\'s $): ', d(np.mean(estateResults)))
+        print('Success rate:', success, 'out of', N,
+              '('+pc(success/N)+')')
+        print('Median estate value (today\'s $): ',
+              d(np.median(estateResults)))
 
         showHistogram(estateResults)
+
+        return
 
 
 ######################################################################
@@ -1327,15 +1526,17 @@ def d(value, f=0):
     Return a string formatting number in $ currency.
     '''
     mystr = '${:,.'+str(f)+'f}'
+
     return mystr.format(value)
 
 
-def pc(value, f=1):
+def pc(value, f=1, mul=100):
     '''
     Return a string formatting number in percent.
     '''
     mystr = '{:.'+str(f)+'f}%'
-    return mystr.format(100*value)
+
+    return mystr.format(mul*value)
 
 
 def formatSpreadsheet(ws, ftype):
@@ -1344,8 +1545,10 @@ def formatSpreadsheet(ws, ftype):
     '''
     if ftype == 'currency':
         fstring = u'$#,##0_);[Red]($#,##0)'
-    elif ftype == 'percent':
+    elif ftype == 'percent2':
         fstring = u'#.00%'
+    elif ftype == 'percent0':
+        fstring = u'#0%'
     else:
         u.xprint('Unknown format:', ftype)
 
@@ -1359,6 +1562,8 @@ def formatSpreadsheet(ws, ftype):
         if column != 'A':
             for cell in col:
                 cell.number_format = fstring
+
+    return
 
 
 def savePlan(plan, fileName):
@@ -1385,6 +1590,7 @@ def readPlan(fileName):
 
     count = int(config['Who']['Count'])
     names = config['Who']['Names'].split(',')
+    coordinatedAR = config['Parameters']['Coordinated allocations']
 
     # Parameters getting one value for each spouse.
     yob = []
@@ -1398,8 +1604,17 @@ def readPlan(fileName):
     n2balances = {}
     initialAR = {}
     finalAR = {}
+    coordinatedAR = config['Parameters']['Coordinated allocations']
+
+    if coordinatedAR == 'none':
+        listAR = ['taxable', 'tax-deferred', 'tax-free']
+    else:
+        listAR = ['coordinated']
+
     for aType in ['taxable', 'tax-deferred', 'tax-free']:
         n2balances[aType] = []
+
+    for aType in listAR:
         initialAR[aType] = []
         finalAR[aType] = []
 
@@ -1414,13 +1629,14 @@ def readPlan(fileName):
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
             n2balances[aType].append(float(config['Asset balances']
                                      [aType+' '+names[i]]))
+        for aType in listAR:
             initialAR[aType].append(config['Initial allocation ratios']
                                     [aType+' '+names[i]].split(','))
             finalAR[aType].append(config['Final allocation ratios']
                                   [aType+' '+names[i]].split(','))
 
     # Convert those strings to float.
-    for aType in ['taxable', 'tax-deferred', 'tax-free']:
+    for aType in listAR:
         for k in range(len(initialAR[aType])):
             initialAR[aType][k] = [float(j) for j in initialAR[aType][k]]
             finalAR[aType][k] = [float(j) for j in finalAR[aType][k]]
@@ -1433,12 +1649,22 @@ def readPlan(fileName):
                           taxFree=n2balances['tax-free'],
                           beneficiary=beneficiary)
 
-    plan.setInitialAR(taxableAR=initialAR['taxable'],
-                      taxDeferredAR=initialAR['tax-deferred'],
-                      taxFreeAR=initialAR['tax-free'])
-    plan.setFinalAR(taxableAR=finalAR['taxable'],
-                    taxDeferredAR=finalAR['tax-deferred'],
-                    taxFreeAR=finalAR['tax-free'])
+    if coordinatedAR == 'none':
+        plan.setInitialAR(taxableAR=initialAR['taxable'],
+                          taxDeferredAR=initialAR['tax-deferred'],
+                          taxFreeAR=initialAR['tax-free'])
+        plan.setFinalAR(taxableAR=finalAR['taxable'],
+                        taxDeferredAR=finalAR['tax-deferred'],
+                        taxFreeAR=finalAR['tax-free'])
+    elif coordinatedAR == 'individual':
+        plan.setCoordinatedAR(initialAR=initialAR['coordinated'],
+                              finalAR=finalAR['coordinated'])
+    elif coordinatedAR == 'both':
+        plan.setCoordinatedAR(initialAR=initialAR['coordinated'][0],
+                              finalAR=finalAR['coordinated'][0])
+    else:
+        u.xprint('Unknown coordination type:', coordinatedAR)
+
     plan.interpolateAR()
 
     plan.setDesiredIncome(float(config['Parameters']['Target']),
@@ -1490,6 +1716,8 @@ def _saveWorkbook(wb, basename, overwrite=False):
                 break
         except Exception:
             u.xprint('Unanticipated exception', Exception)
+
+    return
 
 
 def pfReturn(assetRatios, rates, year, who):
@@ -1581,6 +1809,7 @@ def readTimeLists(filename, n):
             break
 
     u.vprint('Successfully read time horizons from file', filename)
+
     return names, timeLists
 
 
@@ -1601,6 +1830,55 @@ def checkTimeLists(names, timeLists, horizons):
             u.xprint('Time horizon for', names[i],
                      'is too short.\n\tIt should end in', yend,
                      'but ends in', timeLists[i]['year'][-1])
+
+    return
+
+
+def _balance(c, X, Y, Z):
+    '''
+    Core function to coordinate assets allocation ratios amongst
+    different accounts.
+    '''
+    x = np.zeros((4))
+    y = np.zeros((4))
+    z = np.zeros((4))
+    T = X + Y + Z
+
+    if T < 0.01:
+        return x, y, z
+
+    # Maximize stocks in tax-free account, followed by tax-deferred account.
+    z[0] = c[0]*T/(Z + 0.01)
+    z[0] = min(z[0], 1.)
+    y[0] = (c[0]*T - z[0]*Z)/(Y + 0.01)
+    y[0] = min(y[0], 1.)
+    x[0] = (c[0]*T - y[0]*Y - z[0]*Z)/(X + 0.01)
+
+    # Maximize bonds in tax-free account, followed by tax-deferred account.
+    z[1] = c[1]*T/(Z + 0.01)
+    z[1] = min(z[1], 1. - z[0])
+    y[1] = (c[1]*T - z[1]*Z)/(Y + 0.01)
+    y[1] = min(y[1], 1. - y[0])
+    x[1] = (c[1]*T - y[1]*Y - z[1]*Z)/(X + 0.01)
+    x[1] = min(x[1], 1. - x[0])
+
+    # Maximize fixed assets in taxable account.
+    x[3] = c[3]*T/(X + 0.01)
+    x[3] = min(x[3], 1. - x[0] - x[1])
+    y[3] = (c[3]*T - x[3]*X)/(Y + 0.01)
+    y[3] = min(y[3], 1. - y[0] - y[1])
+    z[3] = (c[3]*T - x[3]*X - y[3]*Y)/(Z + 0.01)
+    z[3] = min(z[3], 1. - z[0] - z[1])
+
+    # Treasury bills get the rest.
+    if X > 0.01:
+        x[2] = 1. - sum(x)
+    if Y > 0.01:
+        y[2] = 1. - sum(y)
+    if Z > 0.01:
+        z[2] = 1. - sum(z)
+
+    return x, y, z
 
 
 def smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
@@ -1705,16 +1983,20 @@ def showHistogram(data):
     import matplotlib.pyplot as plt
     import matplotlib.ticker as tk
 
-    nbins = int(len(data)/4)
+    nbins = int(len(data)/10)
     fig, ax = plt.subplots(tight_layout=True)
-    ax.set_title('Final Estate')
-    ax.hist(data, bins=nbins)
+    ax.set_title('Estate Value Distribution')
+    label = 'median: ' + d(np.median(data))
+    ax.hist(data, bins=nbins, label=label)
     ax.set_ylabel('N')
-    ax.set_xlabel('k$')
+    ax.legend(loc='upper right', reverse=False, fontsize=8)
+    ax.set_xlabel('today\'s k$')
     ax.get_xaxis().set_major_formatter(
             tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
 
     plt.show()
+
+    return
 
 
 def showRateDistributions(frm=rates.FROM, to=rates.TO):
@@ -1736,13 +2018,24 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     dat3 = np.array(rates.Inflation[frm:to])
 
     ax[0].set_title('S&P500')
-    ax[0].hist(dat0, bins=nbins)
+    label = '<>: '+pc(np.mean(dat0), 2, 1)
+    ax[0].hist(dat0, bins=nbins, label=label)
+    ax[0].legend(loc='upper left', fontsize=8)
+
     ax[1].set_title('BondsBaa')
-    ax[1].hist(dat1, bins=nbins)
+    label = '<>: '+pc(np.mean(dat1), 2, 1)
+    ax[1].hist(dat1, bins=nbins, label=label)
+    ax[1].legend(loc='upper left', fontsize=8)
+
     ax[2].set_title('TBonds')
-    ax[2].hist(dat2, bins=nbins)
+    label = '<>: '+pc(np.mean(dat2), 2, 1)
+    ax[2].hist(dat1, bins=nbins, label=label)
+    ax[2].legend(loc='upper left', fontsize=8)
+
     ax[3].set_title('Inflation')
-    ax[3].hist(dat3, bins=nbins)
+    label = '<>: '+pc(np.mean(dat3), 2, 1)
+    ax[3].hist(dat3, bins=nbins, label=label)
+    ax[3].legend(loc='upper left', fontsize=8)
 
     plt.show()
 
@@ -1829,4 +2122,5 @@ class geometry:
             # print('Setting geometry to:', x, y)
             self.window += 1
 
+        return
 
