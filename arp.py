@@ -60,7 +60,7 @@ class Plan:
         # Add one more year as we are computing values for next year.
         self.maxHorizon = max(self.horizons) + 2
 
-        u.vprint('Initializing for', self.maxHorizon - 1, 'years',
+        u.vprint('Preparing scenario of', self.maxHorizon - 1, 'years',
                  'for', self.count, 'individuals')
 
         # Variables starting with a 'y' are tracking yearly values.
@@ -103,8 +103,8 @@ class Plan:
         self.ssecAge = None
 
         # Tax rate on taxable portion of estate.
-        self.estateTaxRate = 0
-        self.setEstateTaxRate(25)
+        self.deferredTxRate = 0
+        self.setDeferredTaxRate(25)
 
         self.survivorFraction = 0
         self.setSurvivorFraction(0.6)
@@ -155,103 +155,103 @@ class Plan:
         Set fraction of income desired for survivor spouse.
         '''
         assert (0 <= fraction and fraction <= 1.)
-        u.vprint('Setting survivor spouse income fraction to', fraction)
+        u.vprint('Survivor spouse income fraction set to', fraction)
         self.survivorFraction = fraction
 
         return
 
-    def setEstateTaxRate(self, rate):
+    def setDeferredTaxRate(self, rate):
         '''
-        Set the tax rate on the taxable portion of the estate.
+        Set the tax rate on the tax-deferred portion of the estate.
         '''
         assert (0 <= rate and rate <= 100)
         rate /= 100
-        u.vprint('Setting estate tax rate to', pc(rate))
-        self.estateTaxRate = rate
+        u.vprint('Rate on tax-deferred estate set to', pc(rate))
+        self.deferredTxRate = rate
 
         return
 
-    def setInitialAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
+    def setInitialAR(self, *, taxable, taxDeferred, taxFree):
         '''
         Set values of assets allocation ratios in each of the accounts
         for the first horizon year.
         '''
-        self._setAR(taxableAR, taxDeferredAR, taxFreeAR, 0)
+        self._setAR(taxable, taxDeferred, taxFree, 0)
 
         return
 
-    def setFinalAR(self, *, taxableAR, taxDeferredAR, taxFreeAR):
+    def setFinalAR(self, *, taxable, taxDeferred, taxFree):
         '''
         Set values of assets allocation ratios in each of the accounts
         for the last horizon year.
         '''
-        self._setAR(taxableAR, taxDeferredAR, taxFreeAR, 1)
+        self._setAR(taxable, taxDeferred, taxFree, 1)
 
         return
 
-    def _setAR(self, taxableAR, taxDeferredAR, taxFreeAR, k):
+    def _setAR(self, taxable, taxDeferred, taxFree, k):
         '''
         Utility function for setting initial time and final time values
         on assets allocation ratios.
         '''
         # Make sure we have proper entries.
-        assert len(taxableAR) == self.count
-        assert len(taxDeferredAR) == self.count
-        assert len(taxFreeAR) == self.count
+        assert len(taxable) == self.count
+        assert len(taxDeferred) == self.count
+        assert len(taxFree) == self.count
 
         for i in range(self.count):
-            assert len(taxableAR[i]) == 4
-            assert abs(sum(taxableAR[i]) - 100) < 0.01
+            assert len(taxable[i]) == 4
+            assert abs(sum(taxable[i]) - 100) < 0.01
 
-            assert len(taxDeferredAR[i]) == 4
-            assert abs(sum(taxDeferredAR[i]) - 100) < 0.01
+            assert len(taxDeferred[i]) == 4
+            assert abs(sum(taxDeferred[i]) - 100) < 0.01
 
-            assert len(taxFreeAR[i]) == 4
-            assert abs(sum(taxFreeAR[i]) - 100) < 0.01
+            assert len(taxFree[i]) == 4
+            assert abs(sum(taxFree[i]) - 100) < 0.01
 
         which = ['Initial', 'Final'][k]
 
-        u.vprint(which, 'assets allocation ratios set to: (%)\n', taxableAR,
-                 '\n', taxDeferredAR, '\n', taxFreeAR)
-        self.boundsAR['taxable'][k] = np.array(taxableAR)/100
-        self.boundsAR['tax-deferred'][k] = np.array(taxDeferredAR)/100
-        self.boundsAR['tax-free'][k] = np.array(taxFreeAR)/100
+        u.vprint(which, 'assets allocation ratios set to: (%)\n', taxable,
+                 '\n', taxDeferred, '\n', taxFree)
+        self.boundsAR['taxable'][k] = np.array(taxable)/100
+        self.boundsAR['tax-deferred'][k] = np.array(taxDeferred)/100
+        self.boundsAR['tax-free'][k] = np.array(taxFree)/100
         self.coordinatedAR = 'none'
 
         return
 
-    def setCoordinatedAR(self, *, initialAR, finalAR):
+    def setCoordinatedAR(self, *, initial, final):
         '''
         Set bounds for portfolios coordinated between assets and spouses.
         Scope of coordination is taken from size of arrays.
         '''
-        if len(initialAR) == self.count:
+        if len(initial) == self.count:
             scope = 'individual'
-            assert len(finalAR) == self.count
+            assert len(final) == self.count
 
             for i in range(self.count):
-                assert len(initialAR[i]) == 4
-                assert len(finalAR[i]) == 4
-                assert abs(sum(initialAR[i]) - 100) < 0.01
-                assert abs(sum(finalAR[i]) - 100) < 0.01
+                assert len(initial[i]) == 4
+                assert len(final[i]) == 4
+                assert abs(sum(initial[i]) - 100) < 0.01
+                assert abs(sum(final[i]) - 100) < 0.01
 
-            self.boundsAR['coordinated'][0] = np.array(initialAR)/100
-            self.boundsAR['coordinated'][1] = np.array(finalAR)/100
-        elif len(initialAR) == 4:
+            self.boundsAR['coordinated'][0] = np.array(initial)/100
+            self.boundsAR['coordinated'][1] = np.array(final)/100
+        elif len(initial) == 4:
             scope = 'both'
-            assert len(finalAR) == 4
-            assert abs(sum(initialAR) - 100) < 0.01
-            assert abs(sum(finalAR) - 100) < 0.01
+            assert len(final) == 4
+            assert abs(sum(initial) - 100) < 0.01
+            assert abs(sum(final) - 100) < 0.01
 
             for i in range(self.count):
-                self.boundsAR['coordinated'][0][i] = np.array(initialAR)/100
-                self.boundsAR['coordinated'][1][i] = np.array(finalAR)/100
+                self.boundsAR['coordinated'][0][i] = np.array(initial)/100
+                self.boundsAR['coordinated'][1][i] = np.array(final)/100
         else:
-            u.xprint('Lists provided have wrong length:', len(initialAR))
+            u.xprint('Lists provided have wrong length:', len(initial))
 
         self.coordinatedAR = scope
         u.vprint('Coordinating', scope, 'assets allocation ratios (%):\n',
-                 'initial:', initialAR, '\n  final:', finalAR)
+                 'initial:', initial, '\n  final:', final)
 
         return
 
@@ -957,8 +957,9 @@ class Plan:
                 stackNames.append(name)
                 y2stack[name] = np.zeros((self.count, self.maxHorizon))
                 for i in range(self.count):
-                    y2stack[name][i][:] = self.y2accounts[acType].transpose()[i][:]\
-                            * self.y2assetRatios[acType].transpose(1, 2, 0)[i][assetDic[key]][:]
+                    y2stack[name][i][:] = \
+                        self.y2accounts[acType].transpose()[i][:] *\
+                        self.y2assetRatios[acType].transpose(1, 2, 0)[i][assetDic[key]][:]
                 y2stack[name] = y2stack[name].transpose()
 
             title = 'Assets Allocations - '+acType
@@ -1345,7 +1346,7 @@ class Plan:
         Front-end to _estate() function printing numbers in readable format.
         '''
         if taxRate is None:
-            taxRate = self.estateTaxRate
+            taxRate = self.deferredTxRate
         else:
             taxRate /= 100
 
@@ -1410,7 +1411,7 @@ class Plan:
         config['Parameters'] = \
             {'Target': str(self.target),
              'Profile': str(self.profile),
-             'Estate tax rate': str(100*self.estateTaxRate),
+             'Rate on tax-deferred estate': str(100*self.deferredTxRate),
              'Spousal split': str(self.split),
              'Survivor fraction': str(self.survivorFraction),
              'Time lists file name': str(self.timeListsFileName),
@@ -1443,7 +1444,8 @@ class Plan:
         plotDic = {'rates': self.showRates, 'net income': self.showNetIncome,
                    'sources': self.showSources, 'taxes': self.showTaxes,
                    'gross income': self.showGrossIncome,
-                   'accounts': self.showAccounts
+                   'accounts': self.showAccounts,
+                   'allocations': self.showAssetsAllocations
                    }
 
         for pl in myplots:
@@ -1468,10 +1470,10 @@ class Plan:
                 successCount += 1
 
             # Use tax rate provided on taxable part of estate.
-            estate, factor = self._estate(self.estateTaxRate)
+            estate, factor = self._estate(self.deferredTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
-                  ', tax rate:', pc(self.estateTaxRate))
+                  ', tax rate:', pc(self.deferredTxRate))
             total += estate
             if len(myplots) > 0:
                 # Number of seconds to wait.
@@ -1501,11 +1503,11 @@ class Plan:
             if self.success:
                 success += 1
 
-            # Rely on self.estateTaxRate for rate.
-            estate, factor = self._estate(self.estateTaxRate)
+            # Rely on self.deferredTxRate for rate.
+            estate, factor = self._estate(self.deferredTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
-                  ', tax rate:', pc(self.estateTaxRate))
+                  ', tax rate:', pc(self.deferredTxRate))
             estateResults[i] = estate
 
         print('============================================')
@@ -1649,18 +1651,18 @@ def readPlan(fileName):
                           beneficiary=beneficiary)
 
     if coordinatedAR == 'none':
-        plan.setInitialAR(taxableAR=initialAR['taxable'],
-                          taxDeferredAR=initialAR['tax-deferred'],
-                          taxFreeAR=initialAR['tax-free'])
-        plan.setFinalAR(taxableAR=finalAR['taxable'],
-                        taxDeferredAR=finalAR['tax-deferred'],
-                        taxFreeAR=finalAR['tax-free'])
+        plan.setInitialAR(taxable=initialAR['taxable'],
+                          taxDeferred=initialAR['tax-deferred'],
+                          taxFree=initialAR['tax-free'])
+        plan.setFinalAR(taxable=finalAR['taxable'],
+                        taxDeferred=finalAR['tax-deferred'],
+                        taxFree=finalAR['tax-free'])
     elif coordinatedAR == 'individual':
-        plan.setCoordinatedAR(initialAR=initialAR['coordinated'],
-                              finalAR=finalAR['coordinated'])
+        plan.setCoordinatedAR(initial=initialAR['coordinated'],
+                              final=finalAR['coordinated'])
     elif coordinatedAR == 'both':
-        plan.setCoordinatedAR(initialAR=initialAR['coordinated'][0],
-                              finalAR=finalAR['coordinated'][0])
+        plan.setCoordinatedAR(initial=initialAR['coordinated'][0],
+                              final=finalAR['coordinated'][0])
     else:
         u.xprint('Unknown coordination type:', coordinatedAR)
 
@@ -1668,7 +1670,7 @@ def readPlan(fileName):
 
     plan.setDesiredIncome(float(config['Parameters']['Target']),
                           config['Parameters']['Profile'])
-    plan.setEstateTaxRate(float(config['Parameters']['Estate tax rate']))
+    plan.setDeferredTaxRate(float(config['Parameters']['Rate on tax-deferred estate']))
     plan.setSpousalSplit(config['Parameters']['Spousal split'])
     plan.setSurvivorFraction(float(config['Parameters']['Survivor fraction']))
 
