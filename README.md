@@ -3,12 +3,16 @@
 
 This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring *what if* scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of your strategy under different market assumptions, helping to better understand one's financial situation.
 
-This is a tool for helping retirement planning. It generates future scenarios under different assumptions. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60's, and so on. Income tax calculations for the US federal tax are included, but no state income tax calculations are (yet) included. If you're in Texas or Washington State, you're all set!
+This is a tool for helping retirement planning by generating future scenarios under different assumptions. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60's, and so on. The main target of users are US residents as federal income tax calculations are included, but no state income tax calculations are (yet) included. If you're in Texas or Washington State, you're all set!
 
 Copyright Martin-D. Lacasse (2023)
 
 Disclaimer: I am not a financial planner. You make your own decisions. This program comes with no garanteee. Use at your own risk.
 ---------------------------------------------------------------------------------------------------------------------------------
+
+## Capabilities
+ARP Lab contains historical data from 1928 and can generate scenarios using this data, or using random data
+created from historical statistics. It has many graphing capabilities as well as many heuristics to optimize wealth over the time span of a scenario. These include smart banking strategies, coordinated assets allocations between types of accounts and between spouses, and a basic Roth conversion optimizer still under development. 
 
 ## Rules and assumptions
 ARP Lab relies on a few implicit assumptions:
@@ -26,7 +30,7 @@ ARP Lab relies on a few implicit assumptions:
 - For spouses, surplus over the desired joint income will be deposited in taxable accounts proportionally to that year's spousal income ratio;
 - Tax and IRMAA brackets are assumed to follow inflation;
 - Social security benefits are assumed to be adjusted for inflation;
-- Most importantly, tax rules are projected in the future without any consireration on likely changes to happen with new administrations.
+- Most importantly, tax rules are projected in the future without any consireration on likely changes to happen with new administrations. As of this release, the tax code of 2017 is assumed to be returning at the expiration of the TCJA after 2025.
 
 ## Default values for parameters
 When a new plan is created, ARP Lab will list all the default assumptions as a reminder. All these parameters can be changed with simple commands.
