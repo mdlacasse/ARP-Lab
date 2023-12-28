@@ -44,6 +44,8 @@ It is anticipated that you will change these default values by using `set___()` 
 match your own assumptions. These include the following calls:
     `setInitialAR()`, `setFinalAR()`, `setSurvivorFraction()`, `setSpousalSplit()`, `setEstateTaxRate()`,  `setRates()`, for examples.
 
+## Tutorial
+The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.
 
 ## Requirements to run this program
 ARP Lab is coded in Python and is best run using either the *jupyterlab* or *jupyter* notebook. Therefore, I recommend installing *Anaconda* on your computer. It can be found at anaconda.com. Follow the instruction on the web site to install anaconda on your computer.
