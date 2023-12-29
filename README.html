@@ -1,9 +1,28 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>README</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+</head>
+<body>
 <h1 id="arp-lab">ARP Lab</h1>
 <h2 id="a-retirement-planning-laboratory">A retirement planning laboratory</h2>
-<p>This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring what if scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of your strategy under different market assumptions, helping to better understand one’s financial situation.</p>
-<p>This is a tool for helping retirement planning. It generates future scenarios under different assumptions. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60’s, and so on. Income tax calculations for the US federal tax are included, but no state income tax calculations are (yet) included. If you’re in Texas or Washington State, you’re all set!</p>
+<p>This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring <em>what if</em> scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of your strategy under different market assumptions, helping to better understand one’s financial situation.</p>
+<p>This is a tool for helping retirement planning by generating future scenarios under different assumptions. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60’s, and so on. The main target of users are US residents as federal income tax calculations are included, but no state income tax calculations are (yet) included. If you’re in Texas or Washington State, you’re all set!</p>
 <p>Copyright Martin-D. Lacasse (2023)</p>
 <h2 id="disclaimer-i-am-not-a-financial-planner.-you-make-your-own-decisions.-this-program-comes-with-no-garanteee.-use-at-your-own-risk.">Disclaimer: I am not a financial planner. You make your own decisions. This program comes with no garanteee. Use at your own risk.</h2>
+<h2 id="capabilities">Capabilities</h2>
+<p>ARP Lab contains historical data from 1928 and can generate scenarios using this data, or using random data created from historical statistics. It has many graphing capabilities as well as many heuristics to optimize wealth over the time span of a scenario. These include smart banking strategies, coordinated assets allocations between types of accounts and between spouses, and a basic Roth conversion optimizer still under development.</p>
 <h2 id="rules-and-assumptions">Rules and assumptions</h2>
 <p>ARP Lab relies on a few implicit assumptions:</p>
 <ul>
@@ -12,19 +31,17 @@
 <li>taxable investment accounts (CD’s, bank savings accounts, stock investment accounts, etc.);</li>
 <li>tax-deferred savings accounts (e.g., 401k, 403b, etc.);</li>
 <li>tax-free savings accounts (Roth IRA, Roth 401k, etc.).</li>
-</ol>
-<ul>
+</ol></li>
 <li>Single and Married Filing Jointly are currently the only two choices for income tax calculations;</li>
-</ul></li>
 <li>Rates of return provided for the S&amp;P 500 data include dividends;</li>
 <li>No investment administration fees are accounted for;</li>
 <li>No elaborate tax strategies are considered, such as tax-loss harvesting strategy, net unrealized appreciation, or even reduced rates on long-term capital gains;</li>
-<li>Contributions are assumed to be made at half-year, in the hope of averaging periodic contributions made evenly through the year;</li>
+<li>Contributions to savings accounts are assumed to be made at half-year, in the hope of averaging periodic contributions made evenly through the year;</li>
 <li>No estate tax calculations are included. Only tax on the tax-deferred portion of the estate is accounted for when reporting estate value in today’s $;</li>
 <li>For spouses, surplus over the desired joint income will be deposited in taxable accounts proportionally to that year’s spousal income ratio;</li>
 <li>Tax and IRMAA brackets are assumed to follow inflation;</li>
 <li>Social security benefits are assumed to be adjusted for inflation;</li>
-<li>Most importantly, tax rules are projected in the future without any consireration on likely changes to happen with new administrations.</li>
+<li>Most importantly, tax rules are projected in the future without any consireration on likely changes to happen with new administrations. As of this release, the tax code of 2017 is assumed to be returning at the expiration of the TCJA after 2025.</li>
 </ul>
 <h2 id="default-values-for-parameters">Default values for parameters</h2>
 <p>When a new plan is created, ARP Lab will list all the default assumptions as a reminder. All these parameters can be changed with simple commands. The default choices include:</p>
@@ -33,10 +50,12 @@
 <li>Assets allocation is 25% corporate bonds, 55% 10-year Treasury bonds, and %25 common assets for taxable investment accounts;</li>
 <li>Income for surviving spouse will be %60 of the income of the couple;</li>
 <li>Spousal withdrawals are set to <em>auto</em>, allowing coordination between both accounts;</li>
-<li>Income tax on estate is assumed to be 25% on the taxable portion of the estate;</li>
+<li>Income tax on tax-deferred portion of estate is assumed to be 25% on the taxable portion of the estate;</li>
 <li>Default rates are average rates over the last 30 years.</li>
 </ul>
-<p>These choices have no particular value, except to provide a default case that one can run for demonstration purposes. It is anticipated that you will change these default values by using <code>set___()</code> functions. The <em>jack+jill</em> notebook contains configuration examples describing how to make these values match your own assumptions. These include the following calls: <code>setInitialAR()</code>, <code>setFinalAR()</code>, <code>setSurvivingFraction()</code>, <code>setSpousalSplit()</code>, <code>setEstateTaxRate()</code>, <code>setRates()</code>, for examples.</p>
+<p>These choices have no particular value, except to provide a default case that one can run for demonstration purposes. It is anticipated that you will change these default values by using <code>set___()</code> functions. The <em>jack+jill</em> notebook contains configuration examples describing how to make these values match your own assumptions. These include the following calls: <code>setInitialAR()</code>, <code>setFinalAR()</code>, <code>setSurvivorFraction()</code>, <code>setSpousalSplit()</code>, <code>setEstateTaxRate()</code>, <code>setRates()</code>, for examples.</p>
+<h2 id="tutorial">Tutorial</h2>
+<p>The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.</p>
 <h2 id="requirements-to-run-this-program">Requirements to run this program</h2>
 <p>ARP Lab is coded in Python and is best run using either the <em>jupyterlab</em> or <em>jupyter</em> notebook. Therefore, I recommend installing <em>Anaconda</em> on your computer. It can be found at anaconda.com. Follow the instruction on the web site to install anaconda on your computer.</p>
 <p>The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations.</p>
@@ -86,3 +105,5 @@
 <p>To run a block of code, click on the box and the surrounding perimeter of that box will turn green, indicating that it is ready to run with hitting <em>Crtl-Enter</em>. Alternatively, <em>Shift-Enter</em> will achieve the same result, except that the mouse focus will jump to the next cell. Double-clicking on a markdown cell will switch the cell to the editing mode and show the raw (markdown) code for the text. Running the cell (<em>Ctrl-Enter</em>) will (re-)generate the nice text. Code cells, on the other end, can be edited directly once the mouse focus is on that cell (i.e., there is no need to double-click to edit those cells).</p>
 <p>The menu at the top of the page contains the main commands and will indicate the type of cell where the mouse is focusing. Clicking on run is another way to run the current cell, equivalent to <em>Shift-Enter</em>. It is also possible to run all the cells in the notebook by selecting <em>Run All</em> under the <em>Cell</em> (Jupyter) or <em>Run</em> (Jupyter Lab) headings. Notice all the shortcuts indicated in these menus, providing a keyboard alternative. Moreover, the <em>Help</em> tab contains a <em>User Interface Tour</em>, as well as reference to the Python langage and its most popular packages such as pandas and NumPy, for example. Use these references if needed. You should minimally read the <em>User Interface Tour</em> if you are new to Jupyter Notebook.</p>
 <p>If you want to run the all the commands in a notebook, just look under the <em>Run</em> menu and select <em>Run All</em>. For a fresh run, one can also select <em>Restart Kernel and Run All</em>.</p>
+</body>
+</html>
