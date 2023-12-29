@@ -56,6 +56,8 @@ ARP Lab is coded in Python and is best run using either the *jupyterlab* or *jup
 
 The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations.
 
+You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
+
 The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given below.
 
 ### Getting started
