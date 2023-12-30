@@ -60,7 +60,7 @@ class Plan:
         # Add one more year as we are computing values for next year.
         self.maxHorizon = max(self.horizons) + 2
 
-        u.vprint('Preparing scenario of', self.maxHorizon - 1, 'years',
+        u.vprint('Preparing scenario of', self.maxHorizon - 2, 'years',
                  'for', self.count, 'individuals')
 
         # Variables starting with a 'y' are tracking yearly values.
@@ -677,7 +677,7 @@ class Plan:
         rawTarget = self.target
 
         # For each year ahead:
-        u.vprint('Computing next', self.maxHorizon,
+        u.vprint('Computing next', self.maxHorizon - 2,
                  'years for', [self.names[i] for i in range(self.count)])
 
         # Keep track of surviving spouses.
@@ -793,9 +793,10 @@ class Plan:
                                                   ya2taxDef, ya2taxFree,
                                                   n+1, (i+1) % 2, self.names)
                     if total != abs(bti):
-                        print('WARNING: Insufficient funds for BTI for',
-                              self.names[i], 'in', self.yyear[n])
-                        print('\tRequested:', d(bti), 'Performed:', d(total))
+                        u.vprint('WARNING: Insufficient funds for BTI for',
+                                 self.names[i], 'in', self.yyear[n])
+                        u.vprint('\tRequested:', d(bti),
+                                 'Performed:', d(total))
                         self.success = False
 
                     # A BTI is not an income unless we created a taxable event
@@ -881,7 +882,8 @@ class Plan:
 
                     # No point to loop if we are running out of money.
                     if abs(total - abs(withdrawal)) > 1:
-                        print('WARNING: Running out of money!')
+                        print('WARNING: Running out of money in year',
+                              self.yyear[n])
                         self.success = False
                         break
 
@@ -933,7 +935,8 @@ class Plan:
                     u.vprint(self.names[j], 'has passed.')
                     surviving -= 1
                     if surviving == 0:
-                        u.vprint('Both spouses have passed.')
+                        if self.count == 2:
+                            u.vprint('Both spouses have passed.')
                         return self.yyear, self.y2accounts, \
                             self.y2source, self.yincome
 
@@ -946,9 +949,12 @@ class Plan:
                     # Reduce target income by 40%.
                     rawTarget *= self.survivorFraction
 
+            if not self.success:
+                break
+
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
-    def showAssetsAllocations(self):
+    def showAssetsAllocations(self, tag=''):
         '''
         Plot allocation of savings accounts over time.
         '''
@@ -968,30 +974,33 @@ class Plan:
                 y2stack[name] = y2stack[name].transpose()
 
             title = 'Assets Allocations - '+acType
+            if tag != '':
+                title += ' - '+tag
+
             self._stackPlot(title, y2stack, stackNames, 'upper left')
 
         return
 
-    def showAccounts(self, mytitle=''):
+    def showAccounts(self, tag=''):
         '''
         Plot values of savings accounts over time.
         '''
         title = 'Savings Balance'
-        if mytitle != '':
-            title += ' - '+mytitle
+        if tag != '':
+            title += ' - '+tag
         types = ['taxable', 'tax-deferred', 'tax-free']
 
         self._stackPlot(title, self.y2accounts, types, 'upper left')
 
         return
 
-    def showSources(self, mytitle=''):
+    def showSources(self, tag=''):
         '''
         Plot income over time.
         '''
         title = 'Raw Income Sources'
-        if mytitle != '':
-            title += ' - '+mytitle
+        if tag != '':
+            title += ' - '+tag
 
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
@@ -1034,13 +1043,13 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def showNetIncome(self, mytitle=''):
+    def showNetIncome(self, tag=''):
         '''
         Plot net income and target over time.
         '''
         title = 'Net Income vs. Target'
-        if mytitle != '':
-            title += ' - '+mytitle
+        if tag != '':
+            title += ' - '+tag
 
         data = {'net': '-', 'target': ':'}
         self._lineIncomePlot(data, title)
@@ -1072,15 +1081,15 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def showGrossIncome(self, mytitle=''):
+    def showGrossIncome(self, tag=''):
         '''
         Plot income tax and taxable income over time horizon.
         '''
         import matplotlib.pyplot as plt
 
         title = 'Gross Income vs. Tax Brackets'
-        if mytitle != '':
-            title += ' - '+mytitle
+        if tag != '':
+            title += ' - '+tag
 
         data = {'gross': '-'}
 
@@ -1100,13 +1109,13 @@ class Plan:
 
         return
 
-    def showTaxes(self, mytitle=''):
+    def showTaxes(self, tag=''):
         '''
         Plot income tax paid over time.
         '''
         title = 'Income Tax and IRMAA'
-        if mytitle != '':
-            title += ' - '+mytitle
+        if tag != '':
+            title += ' - '+tag
 
         data = {'irmaa': '-', 'taxes': '-'}
 
@@ -1116,7 +1125,7 @@ class Plan:
         # return fig, ax
         return
 
-    def showRates(self):
+    def showRates(self, tag=''):
         '''
         Plot rate values used over the time horizon.
         '''
@@ -1130,6 +1139,10 @@ class Plan:
         elif self.rateMethod == 'fixed':
             title += str(self.rateMethod)
         title += ')'
+
+        if tag != '':
+            title += ' - '+tag
+
         rateName = ['S&P500 including dividends', 'AA Corporate bonds',
                     '10-y Treasury bonds', 'Inflation']
         ltype = ['-', '-.', ':', '--']
@@ -1454,7 +1467,7 @@ class Plan:
         return
 
     def runOnce(self, stype, frm=rates.FROM, to=rates.TO,
-                rates=None, myplots=[]):
+                rates=None, myplots=[], tag=''):
         '''
         Run one instance of a simulation.
         '''
@@ -1471,11 +1484,11 @@ class Plan:
                    }
 
         for pl in myplots:
-            plotDic[pl]()
+            plotDic[pl](tag)
 
         return self
 
-    def runHistorical(self, frm, to, myplots=[]):
+    def runHistorical(self, frm, to, myplots=[], tag=''):
         '''
         Run historical simulation from each year in the rates provided.
         '''
@@ -1486,7 +1499,7 @@ class Plan:
         for i in range(N):
             print('--------------------------------------------')
             print('Running case #', i, '(', frm+i, ')')
-            self.runOnce('historical', frm+i, to+i, myplots=myplots)
+            self.runOnce('historical', frm+i, to+i, myplots=myplots, tag=tag)
             print('Plan success:', self.success)
             if self.success:
                 successCount += 1
@@ -1991,15 +2004,15 @@ def smartBankingSub(amount, taxable, taxdef, taxfree,
     remain -= portion3
 
     if commit:
-        print('WARNING: Withdrawal of', d(amount),
-              'in year', year, 'for', names[i])
-        print('         short of', d(remain),
-              'as all accounts were exhausted!')
+        u.vprint('WARNING: Withdrawal of', d(amount),
+                 'in year', year, 'for', names[i])
+        u.vprint('         short of', d(remain),
+                 'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]
 
 
-def showHistogram(data):
+def showHistogram(data, tag=''):
     '''
     Plot estate results of a Monte Carlo simulation.
     '''
@@ -2008,7 +2021,12 @@ def showHistogram(data):
 
     nbins = int(len(data)/10)
     fig, ax = plt.subplots(tight_layout=True)
-    ax.set_title('Estate Value Distribution')
+
+    title = 'Estate Value Distribution'
+    if tag != '':
+        title += ' - '+tag
+
+    ax.set_title(title)
     label = 'median: ' + d(np.median(data))
     ax.hist(data, bins=nbins, label=label)
     ax.set_ylabel('N')
@@ -2028,6 +2046,7 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     '''
     import matplotlib.pyplot as plt
 
+    title = 'Rates from '+str(frm)+' to '+str(to)
     # Bring year values to indices.
     frm -= rates.FROM
     to -= rates.FROM
@@ -2040,6 +2059,7 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     dat2 = np.array(rates.TBonds[frm:to])
     dat3 = np.array(rates.Inflation[frm:to])
 
+    fig.suptitle(title)
     ax[0].set_title('S&P500')
     label = '<>: '+pc(np.mean(dat0), 2, 1)
     ax[0].hist(dat0, bins=nbins, label=label)
@@ -2088,7 +2108,7 @@ def optimizeRoth(p, txrate):
     bestX = np.zeros((p.maxHorizon, p.count))
     for i in range(p.count):
         for n in range(p.horizons[i]):
-            print('Running year', n, 'for', p2.names[i])
+            print('Analyzing year', n, 'for', p2.names[i])
             xmax = int(min(p.y2accounts['tax-deferred'][n][i], 400001))
             for rothX in range(0, xmax, 2000):
                 p2.timeLists[i]['Roth X'][n] = rothX
