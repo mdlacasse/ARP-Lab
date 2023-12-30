@@ -119,10 +119,15 @@ class Plan:
 
         # Set default values on bounds.
         u.vprint('Using default values for assets allocation ratios.')
-        for k in 0, 1:
-            self._setAR([[0, 25, 50, 25], [0, 25, 50, 25]],
-                        [[60, 40, 0, 0], [60, 40, 0, 0]],
-                        [[60, 40, 0, 0], [60, 40, 0, 0]], k)
+        for k in [0, 1]:
+            if self.count == 1:
+                self._setAR([[0, 25, 50, 25]],
+                            [[60, 40, 0, 0]],
+                            [[60, 40, 0, 0]], k)
+            else:
+                self._setAR([[0, 25, 50, 25], [0, 25, 50, 25]],
+                            [[60, 40, 0, 0], [60, 40, 0, 0]],
+                            [[60, 40, 0, 0], [60, 40, 0, 0]], k)
 
         self.interpolateAR()
 
@@ -967,22 +972,27 @@ class Plan:
 
         return
 
-    def showAccounts(self):
+    def showAccounts(self, mytitle=''):
         '''
         Plot values of savings accounts over time.
         '''
         title = 'Savings Balance'
+        if mytitle != '':
+            title += ' - '+mytitle
         types = ['taxable', 'tax-deferred', 'tax-free']
 
         self._stackPlot(title, self.y2accounts, types, 'upper left')
 
         return
 
-    def showSources(self):
+    def showSources(self, mytitle=''):
         '''
         Plot income over time.
         '''
         title = 'Raw Income Sources'
+        if mytitle != '':
+            title += ' - '+mytitle
+
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
 
@@ -997,15 +1007,19 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        fig, ax = plt.subplots(figsize=(6, 4))
-        plt.grid(visible='both')
-
         accountValues = {}
         for aType in types:
             for i in range(self.count):
                 tmp = accounts[aType].transpose()[i]
                 if sum(tmp) > 0.01:
                     accountValues[aType+' '+self.names[i]] = tmp
+
+        if len(accountValues) == 0:
+            print('Nothing to plot for', title)
+            return
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        plt.grid(visible='both')
 
         ax.stackplot(self.yyear, accountValues.values(),
                      labels=accountValues.keys(), alpha=0.8)
@@ -1020,11 +1034,13 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def showNetIncome(self):
+    def showNetIncome(self, mytitle=''):
         '''
         Plot net income and target over time.
         '''
         title = 'Net Income vs. Target'
+        if mytitle != '':
+            title += ' - '+mytitle
 
         data = {'net': '-', 'target': ':'}
         self._lineIncomePlot(data, title)
@@ -1056,13 +1072,16 @@ class Plan:
         # plt.show()
         return fig, ax
 
-    def showGrossIncome(self):
+    def showGrossIncome(self, mytitle=''):
         '''
         Plot income tax and taxable income over time horizon.
         '''
         import matplotlib.pyplot as plt
 
         title = 'Gross Income vs. Tax Brackets'
+        if mytitle != '':
+            title += ' - '+mytitle
+
         data = {'gross': '-'}
 
         fig, ax = self._lineIncomePlot(data, title)
@@ -1081,11 +1100,14 @@ class Plan:
 
         return
 
-    def showTaxes(self):
+    def showTaxes(self, mytitle=''):
         '''
         Plot income tax paid over time.
         '''
         title = 'Income Tax and IRMAA'
+        if mytitle != '':
+            title += ' - '+mytitle
+
         data = {'irmaa': '-', 'taxes': '-'}
 
         fig, ax = self._lineIncomePlot(data, title)
