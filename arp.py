@@ -55,13 +55,14 @@ class Plan:
 
         now = datetime.date.today().year
         # Compute both life horizons through a comprehension.
-        self.horizons = [expectancy[i] + YOB[i] - now + 1
+        self.horizons = [expectancy[i] + YOB[i] - now
                          for i in range(self.count)]
-        # Add one more year as we are computing values for next year.
+        # Add one more year as we are computing balances for next year.
+        # Plus one to model inclusive bounds.
         self.maxHorizon = max(self.horizons) + 2
 
         u.vprint('Preparing scenario of', self.maxHorizon - 2, 'years',
-                 'for', self.count, 'individuals')
+                 'for', self.count, 'individual'+['s', ''][self.count])
 
         # Variables starting with a 'y' are tracking yearly values.
         # Initialize variables to track year after year:
@@ -685,17 +686,19 @@ class Plan:
         # Use 1 as default for deposit and withdrawal ratios.
         wdrlRatio = 1
         depRatio = 1
-        for n in range(0, self.maxHorizon):
+        # Omit last item as we are computing values[n+1].
+        for n in range(0, self.maxHorizon - 1):
             u.vprint('-------', self.yyear[n],
                      ' -----------------------------------------------')
 
-            # Balance portfolio with desired assets allocations.
+            # Balance portfolio with desired assets allocations
+            # considering account balances.
             self.balanceAR(n)
 
             # Annual tracker for taxable distribution related to big items.
             btiEvent = 0
             for i in range(self.count):
-                # Is the nth year pass i's life horizon?
+                # Is this nth year more than i's life horizon?
                 if n > self.horizons[i]:
                     u.vprint('Skipping', self.names[i], 'in', self.yyear[n])
                     continue
@@ -710,10 +713,9 @@ class Plan:
                     u.vprint('WARNING:',
                              'Insufficient funds for Roth conversion for',
                              self.names[i], 'in', self.yyear[n])
-                    u.vprint('\tRequested:', d(reqRoth), 'Performed:', d(tmp))
                 if tmp > 0:
                     u.vprint(self.names[i], 'requested Roth conversion:',
-                             d(reqRoth), ' performed:', d(tmp))
+                             d(reqRoth), ' Performed:', d(tmp))
                     ya2taxDef[n][i] -= tmp
                     ya2taxFree[n][i] += tmp
                     ys2RothX[n][i] = tmp
@@ -733,7 +735,6 @@ class Plan:
                 ctrb = self.timeLists[i]['ctrb taxable'][n]
                 growth = (ya2taxable[n][i] + 0.5*ctrb) * \
                     pfReturn(self.y2assetRatios['taxable'], self.rates, n, i)
-
                 ys2div[n][i] = min(0, growth)
                 ya2taxable[n+1][i] += ya2taxable[n][i] + ctrb + growth
                 ytaxableIncome[n] += min(0, growth)
@@ -950,6 +951,9 @@ class Plan:
                     rawTarget *= self.survivorFraction
 
             if not self.success:
+                u.vprint('==================================================')
+                u.vprint('Aborting scenario early due to account exhaustion.')
+                u.vprint('==================================================')
                 break
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
@@ -1492,8 +1496,8 @@ class Plan:
         '''
         Run historical simulation from each year in the rates provided.
         '''
-        to = frm + self.maxHorizon
-        N = rates.TO - self.maxHorizon - frm
+        to = frm + self.maxHorizon - 1
+        N = rates.TO - self.maxHorizon - frm + 2
         successCount = 0
         total = 0
         for i in range(N):
@@ -2056,7 +2060,7 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
 
     dat0 = np.array(rates.SP500[frm:to])
     dat1 = np.array(rates.BondsBaa[frm:to])
-    dat2 = np.array(rates.TBonds[frm:to])
+    dat2 = np.array(rates.TNotes[frm:to])
     dat3 = np.array(rates.Inflation[frm:to])
 
     fig.suptitle(title)
@@ -2070,7 +2074,7 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     ax[1].hist(dat1, bins=nbins, label=label)
     ax[1].legend(loc='upper left', fontsize=8)
 
-    ax[2].set_title('TBonds')
+    ax[2].set_title('TNotes')
     label = '<>: '+pc(np.mean(dat2), 2, 1)
     ax[2].hist(dat1, bins=nbins, label=label)
     ax[2].legend(loc='upper left', fontsize=8)
@@ -2095,7 +2099,7 @@ def optimizeRoth(p, txrate):
     prevState = u.setVerbose(False)
     txrate /= 100
 
-    # Start with zero RothX.
+    # Start by zeroing all RothX.
     for i in range(p2.count):
         for n in range(p2.horizons[i]):
             p2.timeLists[i]['Roth X'][n] = 0
@@ -2105,16 +2109,20 @@ def optimizeRoth(p, txrate):
 
     # Determine Roth conversions providing maximal estate value.
     maxValue = basevalue
-    bestX = np.zeros((p.maxHorizon, p.count))
-    for i in range(p.count):
-        for n in range(p.horizons[i]):
+    bestX = np.zeros((p2.maxHorizon, p2.count))
+    for i in range(p2.count):
+        for n in range(p2.horizons[i]):
             print('Analyzing year', n, 'for', p2.names[i])
             xmax = int(min(p.y2accounts['tax-deferred'][n][i], 400001))
             for rothX in range(0, xmax, 2000):
                 p2.timeLists[i]['Roth X'][n] = rothX
                 p2.run()
-                newValue, mul = p2._estate(txrate)
-                if newValue > maxValue:
+                newValue, mul2 = p2._estate(txrate)
+                if mul2 != mul:
+                    print('DIFFERENT FACTORS!')
+
+                if newValue > maxValue + 0.01:
+                    print('Best value', d(newValue), '>', d(maxValue))
                     maxValue = newValue
                     bestX[n][i] = rothX
             # Reset to zero or use new value.

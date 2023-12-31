@@ -2,7 +2,7 @@
 
 This class provides the historical annual rate of returns for different
 classes of assets: S&P500, Baa corporate bonds, Aaa corporate bonds,
-10-year Treasury bonds, and inflation as measured by CPI all from
+10-year Treasury notes, and inflation as measured by CPI all from
 1928 until now.
 
 Values were extracted from NYU's Stern School of business:
@@ -106,7 +106,7 @@ BondsAaa = [
     ]
 
 # Annual rate of return (%) for 10-y Treasury notes since 1928.
-TBonds = [
+TNotes = [
     0.84, 4.20,
     # 1930
     4.54, -2.56, 8.79, 1.86, 7.96, 4.47, 5.02, 1.38, 4.21, 4.41,
@@ -192,7 +192,7 @@ def getDistributions(frm, to):
     import pandas as pd
 
     series = {'SP500': SP500, 'BondsBaa': BondsBaa,
-              'T. Bonds': TBonds, 'Inflation': Inflation}
+              'T. Notes': TNotes, 'Inflation': Inflation}
 
     df = pd.DataFrame(series)
 
@@ -298,7 +298,7 @@ class rates:
     def genSeries(self, frm=FROM, to=TO, n=TO-FROM+1):
         '''
         Generate a series of nx4 entries of rates representing S&P500,
-        corporate Baa bonds, 10-y treasury bonds, and inflation,
+        corporate Baa bonds, 10-y treasury notes, and inflation,
         respectively. If there are less than 'n' entries
         in sub-series selected by 'setMethod()', values will be repeated
         modulo the length of the sub-series.
@@ -341,13 +341,13 @@ class rates:
     def _histRates(self, n):
         '''
         Return a list of 4 values representing the historical rates
-        of stock, Corporate Baa bonds, Treasury bonds, and inflation,
+        of stock, Corporate Baa bonds, Treasury notes, and inflation,
         respectively. Values are for year (frm + i + j)%(to - frm),
         with values recycled back to 'frm' for years after 'to' year.
         Reason for using two values is to allow Monte-Carlo simulations
         to start at a different year while cycling though the whole series.
         '''
-        hrates = np.array([SP500[n], BondsBaa[n], TBonds[n], Inflation[n]])
+        hrates = np.array([SP500[n], BondsBaa[n], TNotes[n], Inflation[n]])
 
         # Convert from percent to decimal.
         return hrates/100
@@ -355,7 +355,7 @@ class rates:
     def _stochRates(self, n):
         '''
         Return a list of 4 values representing the historical rates
-        of stock, Corporate Baa bonds, Treasury bonds, and inflation,
+        of stock, Corporate Baa bonds, Treasury notes, and inflation,
         respectively. Values are pulled from normal distributions
         having the same characteristics as the historical data for
         the range of years selected.

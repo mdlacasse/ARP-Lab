@@ -37,7 +37,7 @@ When a new plan is created, ARP Lab will list all the default assumptions as a r
 The default choices include:
 
 - Assets allocation is 60% S&P 500 and 40% corporate bonds for tax-deferred and tax-free savings accounts;
-- Assets allocation is 25% corporate bonds, 55% 10-year Treasury bonds, and %25 common assets for taxable investment accounts; 
+- Assets allocation is 25% corporate bonds, 55% 10-year Treasury notes, and %25 common assets for taxable investment accounts; 
 - Income for surviving spouse will be %60 of the income of the couple; 
 - Spousal withdrawals are set to *auto*, allowing coordination between both accounts; 
 - Income tax on tax-deferred portion of estate is assumed to be 25% on the taxable portion of the estate; 
