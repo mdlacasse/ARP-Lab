@@ -947,7 +947,10 @@ class Plan:
                     wdrlRatio = j
                     depRatio = j
                     filingStatus = 'single'
-                    # Reduce target income by 40%.
+                    # Reduce target income.
+                    u.vprint('Reducing net income to',
+                             pc(self.survivorFraction, f=0),
+                             'of original target')
                     rawTarget *= self.survivorFraction
 
             if not self.success:
@@ -2113,16 +2116,14 @@ def optimizeRoth(p, txrate):
     for i in range(p2.count):
         for n in range(p2.horizons[i]):
             print('Analyzing year', n, 'for', p2.names[i])
-            xmax = int(min(p.y2accounts['tax-deferred'][n][i], 400001))
+            # xmax = int(min(p.y2accounts['tax-deferred'][n][i], 400001))
+            xmax = int(min(p.y2accounts['tax-deferred'][n][i], 120001))
             for rothX in range(0, xmax, 2000):
                 p2.timeLists[i]['Roth X'][n] = rothX
                 p2.run()
                 newValue, mul2 = p2._estate(txrate)
-                if mul2 != mul:
-                    print('DIFFERENT FACTORS!')
 
                 if newValue > maxValue + 0.01:
-                    print('Best value', d(newValue), '>', d(maxValue))
                     maxValue = newValue
                     bestX[n][i] = rothX
             # Reset to zero or use new value.
@@ -2136,6 +2137,15 @@ def optimizeRoth(p, txrate):
           '(', d(newvalue - basevalue), ')')
 
     return p2, bestX
+
+
+def clone(plan):
+    '''
+    Return an identical copy of plan.
+    '''
+    import copy
+
+    return copy.deepcopy(plan)
 
 
 def isInJupyter():
