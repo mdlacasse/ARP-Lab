@@ -62,7 +62,7 @@ class Plan:
         self.maxHorizon = max(self.horizons) + 2
 
         u.vprint('Preparing scenario of', self.maxHorizon - 2, 'years',
-                 'for', self.count, 'individual'+['s', ''][self.count])
+                 'for', self.count, 'individual'+['', 's'][self.count-1])
 
         # Variables starting with a 'y' are tracking yearly values.
         # Initialize variables to track year after year:
