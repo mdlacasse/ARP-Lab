@@ -2092,32 +2092,45 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     return fig, ax
 
 
-def optimizeRoth(p, txrate):
+def _montecarloRoth(p2, baseValue, txrate):
     '''
-    Determines optimal Roth conversions.
+    Determine best Roth conversions through MC.
     '''
-    import copy
+    import random
+    random.seed()
 
-    p2 = copy.deepcopy(p)
-    prevState = u.setVerbose(False)
-    txrate /= 100
+    maxValue = baseValue
+    bestX = np.zeros((p2.maxHorizon, p2.count))
+    counter = 0
+    while counter < 100:
+        i = int(random.random()*p2.count)
+        n = int(random.random()*p2.horizons[i])
+        rothX = int(min(p2.y2accounts['tax-deferred'][n][i], 10000))
+        p2.timeLists[i]['Roth X'][n] += rothX
+        p2.run()
+        newValue, mul2 = p2._estate(txrate)
+        if newValue > maxValue + 0.01:
+            maxValue = newValue
+            bestX[n][i] = p2.timeLists[i]['RothX'][n]
+            counter = 0
+        else:
+            p2.timeLists[i]['Roth X'][n] -= rothX
+            counter += 1
 
-    # Start by zeroing all RothX.
-    for i in range(p2.count):
-        for n in range(p2.horizons[i]):
-            p2.timeLists[i]['Roth X'][n] = 0
+    return bestX
 
-    p2.run()
-    basevalue, mul = p2._estate(txrate)
 
-    # Determine Roth conversions providing maximal estate value.
-    maxValue = basevalue
+def _sequentialRoth(p2, baseValue, txrate):
+    '''
+    Determine best Roth conversions through trial and error sweep.
+    '''
+    maxValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count))
     for i in range(p2.count):
         for n in range(p2.horizons[i]):
             print('Analyzing year', n, 'for', p2.names[i])
             # xmax = int(min(p.y2accounts['tax-deferred'][n][i], 400001))
-            xmax = int(min(p.y2accounts['tax-deferred'][n][i], 120001))
+            xmax = int(min(p2.y2accounts['tax-deferred'][n][i], 120001))
             for rothX in range(0, xmax, 2000):
                 p2.timeLists[i]['Roth X'][n] = rothX
                 p2.run()
@@ -2129,12 +2142,34 @@ def optimizeRoth(p, txrate):
             # Reset to zero or use new value.
             p2.timeLists[i]['Roth X'][n] = bestX[n][i]
 
+    return bestX
+
+
+def optimizeRoth(p, txrate):
+    '''
+    Determines optimal Roth conversions.
+    Goal is to maximize estate given a tax-deferred tax rate.
+    '''
+    p2 = clone(p)
+    txrate /= 100
+
+    prevState = u.setVerbose(False)
     p2.run()
-    newvalue, mul = p2._estate(txrate)
+    baseValue, mul = p2._estate(txrate)
+
+    # Start by zeroing all RothX in cloned plan.
+    for i in range(p2.count):
+        for n in range(p2.horizons[i]):
+            p2.timeLists[i]['Roth X'][n] = 0
+
+    bestX = _sequentialRoth(p2, baseValue, txrate)
+
+    p2.run()
+    newValue, mul = p2._estate(txrate)
     u.setVerbose(prevState)
 
-    print('Estate increased from', d(basevalue), 'to', d(newvalue),
-          '(', d(newvalue - basevalue), ')')
+    print('Estate increased from', d(baseValue), 'to', d(newValue),
+          '(', d(newValue - baseValue), ')')
 
     return p2, bestX
 
