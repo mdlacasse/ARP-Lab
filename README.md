@@ -14,7 +14,7 @@ Disclaimer: I am not a financial planner. You make your own decisions. This prog
 
 ## Capabilities
 ARP Lab contains historical data from 1928 to last year and can generate scenarios using this data, or using random data
-created from historical statistics. It has many graphing capabilities as well as many heuristics to optimize wealth over the time span of a scenario. These include smart banking strategies, coordinated assets allocations between types of accounts and between spouses, and a basic Roth conversion optimizer still under development. 
+created from historical statistics. It has many graphing capabilities as well as many heuristics for optimizing wealth over the time span of a scenario. These include smart banking strategies, coordinated assets allocations between types of accounts and between spouses, and a Roth conversion optimizer using a Monte Carlo approach. 
 
 ## Rules and assumptions
 ARP Lab relies on a few implicit assumptions:
