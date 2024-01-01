@@ -54,7 +54,7 @@ match your own assumptions. These include the following calls:
 The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.
 
 ## Requirements to run this program
-ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebook. Therefore, I recommend installing *Anaconda* on your computer. It can be found at anaconda.com. Follow the instruction on the web site to install anaconda on your computer.
+ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebook. Therefore, I recommend installing *Anaconda* on your computer. It can be found at anaconda.com. Follow the instruction below to install anaconda on your computer.
 
 The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations.
 
