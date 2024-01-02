@@ -60,7 +60,7 @@ ARP Lab comes with a few notebooks as examples:
 The best way to start is to read the example files described above. These files are meant to be run in a jupyter notebook, but these files can also be read in preview mode. Once familiar with their contents, go to the next section that will get you started.
 
 ## Requirements to run this program
-ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebook. Therefore, I strongly recommend installing *Anaconda* on your computer. It can be found at [anaconda.com](https://anaconda.com). Follow the instructions in the Jupyter tutorial included (link below) for installing anaconda on your computer. The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations. Jupyter will run in your default web browser, from your computer to your browser, and therefore no data is ever transferred on the Internet (your computer, i.e., `localhost`, is the server).
+ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebooks. Therefore, I strongly recommend installing *Anaconda* on your computer. It can be found at [anaconda.com](https://anaconda.com). Follow the instructions in the Jupyter tutorial included (link below) for installing anaconda on your computer. The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations. Jupyter will run in your default web browser, from your computer to your browser, and therefore no data is ever transferred on the Internet (your computer, i.e., `localhost`, is the server).
 
 You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
 
@@ -79,6 +79,6 @@ To edit files and run your own cases:
 2) Rename the copied files to something relevant to your case, say *kim+sam.ipynb* and *kim+sam.xlsx* if you are Kim and Sam.
 3) Edit each tab of the *kim+sam.xlsx* file to reflect your names, wages, contributions, and large financial events (a.k.a., big-ticket items).
 4) Open *kim+sam.ipynb* notebook in the JupyterLab interface.
-5) Add the additional information and assumption required to run a case;
+5) Add the additional information and assumptions required to run a case;
 6) Give me some feedback for improvement.
 
