@@ -52,7 +52,7 @@ match your own assumptions. These include the following calls:
 
 ## Case studies
 ARP Lab comes with a few notebooks as examples:
-- [jack+jill](https://github.com/mdlacasse/ARP-Lab/blob/main/jack+jill.ipynb): describes the case of a couple about the enter retirement. This case introduces most of the capabilities of the ARP Lab platform.
+- [jack+jill](https://github.com/mdlacasse/ARP-Lab/blob/main/jack+jill.ipynb): describes the case of a ficticious couple about to enter retirement. This case introduces most of the capabilities of the ARP Lab platform.
 - [bengen_4%](https://github.com/mdlacasse/ARP-Lab/blob/main/bengen_4%.ipynb): reproduces the 4% rule proposed by Bill Bengen in 1994. It uses unrealistically small asset values to avoid triggering income tax.
 - [mary+john](https://github.com/mdlacasse/ARP-Lab/blob/main/mary+john.ipynb): explores the case of more elaborate asset allocation coordination schemes and its effect on final wealth.
 
