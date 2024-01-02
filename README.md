@@ -57,12 +57,10 @@ ARP Lab comes with a few notebooks as examples:
 - [mary+john](https://github.com/mdlacasse/ARP-Lab/blob/main/mary+john.ipynb): explores the case of more elaborate asset allocation coordination schemes and its effect on final wealth.
 
 ## Tutorial
-The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.
+The best way to start is to read the example files described above. These files are meant to be run in a jupyter notebook, but these files can also be read in preview mode. Once familiar with their contents, go to the next section that will get you started.
 
 ## Requirements to run this program
-ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebook. Therefore, I recommend installing *Anaconda* on your computer. It can be found at anaconda.com. Follow the instruction below to install anaconda on your computer.
-
-The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations.
+ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebook. Therefore, I strongly recommend installing *Anaconda* on your computer. It can be found at [anaconda.com](https://anaconda.com). Follow the instructions in the Jupyter tutorial included (link below) for installing anaconda on your computer. The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations. It will run in your default web browser.
 
 You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
 
