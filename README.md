@@ -50,6 +50,12 @@ It is anticipated that you will change these default values by using `set___()` 
 match your own assumptions. These include the following calls:
     `setInitialAR()`, `setFinalAR()`, `setSurvivorFraction()`, `setSpousalSplit()`, `setDeferredTaxRate()`,  `setRates()`, for examples.
 
+## Case studies
+ARP Lab comes with a few notebooks as examples:
+- [jack+jill](https://github.com/mdlacasse/ARP-Lab/jack+jill.ipynb): describes the case of a couple about the enter retirement. This case introduces most of the capabilities of the ARP Lab platform.
+- [bengen_4%](https://github.com/mdlacasse/ARP-Lab/bengen_4%.ipynb): reproduces the 4% rule proposed by Bill Bengen in 1994. It uses unrealistically small asset values to avoid triggering income tax.
+- [mary+john](https://github.com/mdlacasse/ARP-Lab/mary+john.ipynb): explores the case of more elaborate asset allocation coordination schemes and its effect on final wealth.
+
 ## Tutorial
 The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.
 
@@ -60,7 +66,7 @@ The Jupyter Notebook interface is a Web-based application for authoring document
 
 You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
 
-The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given below.
+The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given [here](https://github.com/mdlacasse/ARP-Lab/Jupyter_tutorial.md).
 
 ### Getting started
 To run the demo version describing a hypothetical case:
