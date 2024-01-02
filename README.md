@@ -5,7 +5,7 @@ This package is a retirement modeling framework for exploring the sensitivity of
 
 Many use Excel to build their own plans using different worksheets. But there is only so much that one can do in Excel. This tool brings more capabilities, allowing for better planning by generating future scenarios under different market assumptions and graphing capabilites for comparing the different outcomes. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to reproduce the historical success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing a second house in your 60's, and so on. ARP Lab is currently appropriate for U.S. individuals as federal income tax calculations are automatically performed, but no state income tax are included as of now. If you're in Texas or Washington State, you're all set!
 
-ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter notebook interface. So target users need to be young enough to have some basic Python skills or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to be close to retirement. 
+ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter notebook interface. Therefore, target users need to be young enough to have some basic Python skills (or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to contemplate retirement. 
 
 Copyright Martin-D. Lacasse (2023)
 
