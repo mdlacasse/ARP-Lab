@@ -18,7 +18,7 @@
 <h1 id="arp-lab">ARP Lab</h1>
 <h2 id="a-retirement-planning-laboratory">A retirement planning laboratory</h2>
 <p>This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring <em>what if</em> scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of your strategy under different market assumptions, helping to better understand one’s financial situation.</p>
-<p>Many use Excel to build their own plans on a worksheets. But there is only so much one can do in Excel. This tool brings a little more capabilities and allows better planning by generating future scenarios under different assumptions and comparing them. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60’s, and so on. This platfom is mostly targeting U.S. individuals as federal income tax calculations are automatically performed, but no state income tax are included as of now. If you’re in Texas or Washington State, you’re all set!</p>
+<p>Many use Excel to build their own plans on different worksheets. But there is only so much one can do in Excel. This tool brings a little more capabilities and allows better planning by generating future scenarios under different assumptions and comparing them. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60’s, and so on. ARP Lab is currently appropriate for U.S. individuals as federal income tax calculations are automatically performed, but no state income tax are included as of now. If you’re in Texas or Washington State, you’re all set!</p>
 <p>ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter interface. So users need to be young enough to have some basic Python skills or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to be close to retirement.</p>
 <p>Copyright Martin-D. Lacasse (2023)</p>
 <h2 id="disclaimer-i-am-not-a-financial-planner.-you-make-your-own-decisions.-this-program-comes-with-no-garanteee.-use-at-your-own-risk.">Disclaimer: I am not a financial planner. You make your own decisions. This program comes with no garanteee. Use at your own risk.</h2>
@@ -54,58 +54,18 @@
 <li>Income tax on tax-deferred portion of estate is assumed to be 25% on the taxable portion of the estate;</li>
 <li>Default rates are average rates over the last 30 years.</li>
 </ul>
-<p>These choices have no particular value, except to provide a default case that one can run for demonstration purposes. It is anticipated that you will change these default values by using <code>set___()</code> functions. The <em>jack+jill</em> notebook contains configuration examples describing how to make these values match your own assumptions. These include the following calls: <code>setInitialAR()</code>, <code>setFinalAR()</code>, <code>setSurvivorFraction()</code>, <code>setSpousalSplit()</code>, <code>setEstateTaxRate()</code>, <code>setRates()</code>, for examples.</p>
+<p>These choices have no particular value, except to provide a default case that one can run for demonstration purposes. It is anticipated that you will change these default values by using <code>set___()</code> functions. The <em>jack+jill</em> notebook contains configuration examples describing how to make these values match your own assumptions. These include the following calls: <code>setInitialAR()</code>, <code>setFinalAR()</code>, <code>setSurvivorFraction()</code>, <code>setSpousalSplit()</code>, <code>setDeferredTaxRate()</code>, <code>setRates()</code>, for examples.</p>
+<h2 id="case-studies">Case studies</h2>
+<p>ARP Lab comes with a few notebooks as examples: - <a href="https://github.com/mdlacasse/ARP-Lab/jack+jill.ipynb">jack+jill</a>: describes the case of a couple about the enter retirement. This case introduces most of the capabilities of the ARP Lab platform. - <a href="https://github.com/mdlacasse/ARP-Lab/bengen_4%.ipynb">bengen_4%</a>: reproduces the 4% rule proposed by Bill Bengen in 1994. It uses unrealistically small asset values to avoid triggering income tax. - <a href="https://github.com/mdlacasse/ARP-Lab/mary+john.ipynb">mary+john</a>: explores the case of more elaborate asset allocation coordination schemes and its effect on final wealth.</p>
 <h2 id="tutorial">Tutorial</h2>
 <p>The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.</p>
 <h2 id="requirements-to-run-this-program">Requirements to run this program</h2>
-<p>ARP Lab is coded in Python and is best run using either the <em>JupyterLab</em> or <em>jupyter</em> notebook. Therefore, I recommend installing <em>Anaconda</em> on your computer. It can be found at anaconda.com. Follow the instruction on the web site to install anaconda on your computer.</p>
+<p>ARP Lab is coded in Python and is best run using either the <em>JupyterLab</em> or <em>jupyter</em> notebook. Therefore, I recommend installing <em>Anaconda</em> on your computer. It can be found at anaconda.com. Follow the instruction below to install anaconda on your computer.</p>
 <p>The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations.</p>
 <p>You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.</p>
-<p>The intent of using a notebook is that one can configure calculations that suit one’s needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given below.</p>
+<p>The intent of using a notebook is that one can configure calculations that suit one’s needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given <a href="https://github.com/mdlacasse/ARP-Lab/Jupyter_tutorial.md">here</a>.</p>
 <h3 id="getting-started">Getting started</h3>
 <p>To run the demo version describing a hypothetical case: 1) Start the Anaconda Navigator. This has a green circle representative icon. 2) Launch a JupyterLab session by clicking <em>Launch</em> under the <em>JupyterLab</em> icon. 3) Using the navigation panel on the left, get to the directory where you unzipped ARP Lab. 4) Open the <em>jack+jill.ipynb</em> notebook from the browser interface of JupyterLab. 5) Follow instructions therein.</p>
 <p>To edit files and run your own cases: 1) Make a copy of the files <em>template.ipynb</em> and <em>template.xlxs</em>. 2) Rename the copied files to something relevant to your case, say <em>kim+sam.ipynb</em> and <em>kim+sam.xlsx</em> if you are Kim and Sam. 3) Edit each tab of the <em>kim+sam.xlsx</em> file to reflect your names, wages, contributions, and large financial events (a.k.a., big-ticket items). 4) Open <em>kim+sam.ipynb</em> notebook in the JupyterLab interface. 5) Add the additional information and assumption required to run a case; 6) Give me some feedback for improvement.</p>
-<h1 id="intro-to-jupyter">Intro to Jupyter</h1>
-<h2 id="installation">Installation</h2>
-<p>Installation of Anaconda is relatively straightforward, just go to this <a href="http://anaconda.com/">link</a>, and click the download icon <img src="images/Picture1.png" alt="Download" /> which should automatically detect your operating system. Else, you could look for the <em>Anaconda installers</em> box at the bottom of the web page. At the time of this writing, the latest version is Anaconda 23.7.4 or 2023.07.2 using Python 3.11.</p>
-<figure>
-<img src="images/Picture2.png" alt="" /><figcaption>Anaconda Installers</figcaption>
-</figure>
-<p>There will be a few installation steps to click through - you can generally use the defaults. For detailed instructions, here are the particular OS installation guides:</p>
-<ul>
-<li><a href="https://docs.anaconda.com/free/anaconda/install/windows/">Windows computers</a></li>
-<li><a href="https://docs.anaconda.com/free/anaconda/install/mac-os/">MacOS</a></li>
-<li><a href="https://docs.anaconda.com/free/anaconda/install/linux/">Linux</a></li>
-</ul>
-<h2 id="opening-the-anaconda-navigator">Opening the Anaconda Navigator</h2>
-<p>Following a successful installation, you should be able to open the Anaconda navigator.</p>
-<h3 id="windows-computers">Windows computers</h3>
-<p>Click on the Windows Icon and search through the applications installed on your computer and open via the Anaconda Icon, which should look like this icon. Alternatively, you can type <em>anaconda-navigator</em> in the search tool located in the task bar (notice that, by default, searching in Windows is not case sensitive).</p>
-<figure>
-<img src="images/Picture4.png" alt="" /><figcaption>Anaconda</figcaption>
-</figure>
-<h3 id="macos">MacOS</h3>
-<p>Open your Finder and go to the <em>Applications</em> Folder, look for <em>Anaconda-Navigator</em>, with the same icon you see above.</p>
-<h3 id="linux">Linux</h3>
-<p>Open a terminal window and type <em>anaconda-navigator</em>. Upon successfully opening the navigator you should see something resembling the following window. Be patient, it sometimes takes a while to load.</p>
-<figure>
-<img src="images/Picture5.png" alt="" /><figcaption>Navigator</figcaption>
-</figure>
-<p>The navigator can be used to start many applications. Those of interest to us are mainly the Jupyter Notebook reader and a terminal shell. The advantage of starting a command shell from the navigator is that all the environment variables are already pre-configured for Python. On Windows, we recommend using the PowerShell Prompt over CMD, as the former provides command line editing and history and is therefore more user friendly.</p>
-<h2 id="opening-a-jupyter-notebook">Opening a Jupyter notebook</h2>
-<p>Start the anaconda navigator and launch the Jupyter Notebook interpreter by clicking on the Launch button of the icon shown here.</p>
-<figure>
-<img src="images/Picture6.png" alt="" /><figcaption>Notebook</figcaption>
-</figure>
-<p>The Jupyter Notebook interpreter will start a virtual web server on your computer (localhost) that will be visualized through your default web browser. One can also choose JupyterLab which has a few more features. Either one will work fine.</p>
-<p>The opening page will show the files on your computer. By clicking on the directories, navigate to where you saved the notebooks. As before, ‘..’ stands for returning to the parent directory. Note that unlike other navigators (e.g., Explorer) a single click is necessary to open a directory.</p>
-<p>Jupyter notebooks end with the <em>.ipynb</em> file extension. Clicking on the desired file will open the Jupyter Notebook interpreter of that file in a different tab of your browser. These notebooks contain intructions as well as code that can be edited and run. Boxes starting with the <em>In [ ]</em> keyword are called <em>code cells</em>; they are a block of Python code input waiting to be run. Other boxes, called <em>markdown cells</em>, are meant to give instructions. The number between brackets keeps track of the instruction numbers, showing the sequence of the instructions that were run, possibly out of order. A cell generating output will have an <em>Out[ ]</em> with an associated sequence number in the brackets. An entire notebook can be reset by restarting the kernel and clearing all output and the state of all variables. This is done through selecting <em>Restart and Clear Output</em> under the <em>Kernel</em> tab.</p>
-<figure>
-<img src="images/Picture7.png" alt="" /><figcaption>Header</figcaption>
-</figure>
-<h2 id="running-a-jupyter-notebook">Running a Jupyter notebook</h2>
-<p>To run a block of code, click on the box and the surrounding perimeter of that box will turn green, indicating that it is ready to run with hitting <em>Crtl-Enter</em>. Alternatively, <em>Shift-Enter</em> will achieve the same result, except that the mouse focus will jump to the next cell. Double-clicking on a markdown cell will switch the cell to the editing mode and show the raw (markdown) code for the text. Running the cell (<em>Ctrl-Enter</em>) will (re-)generate the nice text. Code cells, on the other end, can be edited directly once the mouse focus is on that cell (i.e., there is no need to double-click to edit those cells).</p>
-<p>The menu at the top of the page contains the main commands and will indicate the type of cell where the mouse is focusing. Clicking on run is another way to run the current cell, equivalent to <em>Shift-Enter</em>. It is also possible to run all the cells in the notebook by selecting <em>Run All</em> under the <em>Cell</em> (Jupyter) or <em>Run</em> (Jupyter Lab) headings. Notice all the shortcuts indicated in these menus, providing a keyboard alternative. Moreover, the <em>Help</em> tab contains a <em>User Interface Tour</em>, as well as reference to the Python langage and its most popular packages such as pandas and NumPy, for example. Use these references if needed. You should minimally read the <em>User Interface Tour</em> if you are new to Jupyter Notebook.</p>
-<p>If you want to run the all the commands in a notebook, just look under the <em>Run</em> menu and select <em>Run All</em>. For a fresh run, one can also select <em>Restart Kernel and Run All</em>.</p>
 </body>
 </html>
