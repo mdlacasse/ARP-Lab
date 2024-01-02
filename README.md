@@ -64,7 +64,7 @@ ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jup
 
 You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
 
-The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given [here](https://github.com/mdlacasse/ARP-Lab/blob/main/Jupyter_tutorial.md).
+The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary including installation procedures is given [here](https://github.com/mdlacasse/ARP-Lab/blob/main/Jupyter_tutorial.md).
 
 ### Getting started
 To run the demo version describing a hypothetical case:
