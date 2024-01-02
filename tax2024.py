@@ -30,9 +30,9 @@ def inflationAdjusted(base, year, rates, refIndex=0):
     the calculation. Year can be the nth year from now,
     or a year in the future.
     '''
-    # Were we given a year? Make it in reference to this updated 2023.
+    # Were we given a year? Make it in reference to this update.
     if year > 1000:
-        index = year - 2023
+        index = year - 2024
     else:
         index = year
 
@@ -60,15 +60,17 @@ def irmaa(magi, filingStatus, year, rates):
     the rates for adjustments are for the current time.
     '''
 
-    table2023_MFJ = {194000: 0, 246000: 790.80, 306000: 1977.60,
-                     366000: 3164.40, 750000: 4351.20, 99999999: 4747.20}
-    table2023_S = {97000: 0, 123000: 790.80, 153000: 1977.60,
-                   183000: 3164.40, 500000: 4351.20, 99999999: 4747.20}
+    table2024_MFJ = {206000: 0, 258000: 838.80,
+                     322000: 2096.40, 386000: 3354.00,
+                     750000: 4611.60, 99999999: 5031.60}
+    table2024_S = {103000: 0, 129000: 838.80,
+                   161000: 2096.40, 193000: 3354.00,
+                   500000: 4611.60, 99999999: 5031.60}
 
     if filingStatus == 'married':
-        table = table2023_MFJ
+        table = table2024_MFJ
     elif filingStatus == 'single':
-        table = table2023_S
+        table = table2024_S
     else:
         u.xprint('In irmaa function: Unknown filing status', filingStatus)
 
@@ -87,27 +89,27 @@ def stdDeduction(yobs, filingStatus, year, rates):
     '''
     # [Single, married filing jointly] numbers.
     # ded2017 = [6350, 12700] #  Original 2017 values
-    # Inflation-adjusted (+23%) to 2023
-    ded2017 = [7800, 15600]
-    ded2023 = [13850, 27700]
+    # Inflation-adjusted (+30%) to 2024
+    ded2017 = [8250, 16500]
+    ded2024 = [14600, 29200]
 
-    # Add inflation-adjusted $1,850 deduction for single over 65 yo
-    # or $1,500 for each spouse over 65 yo.
+    # Add inflation-adjusted $1,850 for single over 65 yo.
+    # Or $1,500/indiv for couples.
     ded65 = 0
     if filingStatus == 'single':
         k = 0
-        ded65 += inflationAdjusted(1850, year, rates)
+        ded65 += inflationAdjusted(1950, year, rates)
     elif filingStatus == 'married':
         k = 1
-    for i in range(len(yobs)):
-        if year - yobs[i] >= 65:
-            ded65 += inflationAdjusted(1500, year, rates)
+        for i in range(len(yobs)):
+            if year - yobs[i] >= 65:
+                ded65 += inflationAdjusted(1550, year, rates)
     else:
         u.xprint('In stdDeduction: Unknown status', filingStatus)
 
     # Use the TCJA numbers for years before 2025 (Tax Cuts and Jobs Act).
     if year <= 2025:
-        return ded65 + inflationAdjusted(ded2023[k], year, rates)
+        return ded65 + inflationAdjusted(ded2024[k], year, rates)
 
     # Tax code returns to 2017 code in 2026.
     # Guestimated to be around 16k$ in 2026.
@@ -141,22 +143,22 @@ def incomeTax(agi, yobs, filingStatus, year, rates):
     '''
     # TCJA rates
     # Married filing jointly
-    tax2023_MFJ = {22000: 0.10,
-                   89450: 0.12,
-                   190750: 0.22,
-                   364200: 0.24,
-                   462500: 0.32,
-                   693750: 0.35,
+    tax2024_MFJ = {23200: 0.10,
+                   94300: 0.12,
+                   201050: 0.22,
+                   383900: 0.24,
+                   487450: 0.32,
+                   731200: 0.35,
                    99999999: 0.37
                    }
 
     # Single
-    tax2023_S = {11000: 0.10,
-                 44725: 0.12,
-                 95375: 0.22,
-                 182100: 0.24,
-                 231250: 0.32,
-                 578125: 0.35,
+    tax2024_S = {11600: 0.10,
+                 47150: 0.12,
+                 100525: 0.22,
+                 191950: 0.24,
+                 243725: 0.32,
+                 609350: 0.35,
                  99999999: 0.37
                  }
 
@@ -168,7 +170,7 @@ def incomeTax(agi, yobs, filingStatus, year, rates):
                    153100: 0.25,
                    233350: 0.28,
                    416700: 0.33,
-                   470000: 0.35,
+                   470700: 0.35,
                    99999999: 0.396
                    }
 
@@ -183,24 +185,24 @@ def incomeTax(agi, yobs, filingStatus, year, rates):
                  }
     '''
 
-    # 2017 rates inflation-adjusted to 2023 (+23.0% increase)
+    # 2017 rates inflation-adjusted to 2024 (+30.0% increase)
     # Married filing jointly
-    tax2017_MFJ = {22940: 0.10,
-                   93360: 0.15,
-                   188310: 0.25,
-                   287020: 0.28,
-                   512540: 0.33,
-                   578100: 0.35,
+    tax2017_MFJ = {24200: 0.10,
+                   98700: 0.15,
+                   199000: 0.25,
+                   303350: 0.28,
+                   541700: 0.33,
+                   611900: 0.35,
                    99999999: 0.396
                    }
 
     # Single
-    tax2017_S = {11470: 0.10,
-                 46680: 0.15,
-                 113040: 0.25,
-                 235730: 0.28,
-                 512540: 0.33,
-                 514630: 0.35,
+    tax2017_S = {12100: 0.10,
+                 49300: 0.15,
+                 119500: 0.25,
+                 249100: 0.28,
+                 541700: 0.33,
+                 543900: 0.35,
                  99999999: 0.396
                  }
 
@@ -208,12 +210,12 @@ def incomeTax(agi, yobs, filingStatus, year, rates):
 
     if filingStatus == 'single':
         if year < 2026:
-            taxTable = tax2023_S
+            taxTable = tax2024_S
         else:
             taxTable = tax2017_S
     elif filingStatus == 'married':
         if year < 2026:
-            taxTable = tax2023_MFJ
+            taxTable = tax2024_MFJ
         else:
             taxTable = tax2017_MFJ
     else:
@@ -239,7 +241,6 @@ def calcTax(income, year, rates, taxTable):
             tax += (nowBracket - prevBracket)*txrate
         else:
             tax += (income - prevBracket)*txrate
-            # print('Effective tax rate of', tax/income, 'on', income)
             return tax
 
         prevBracket = nowBracket

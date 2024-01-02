@@ -21,7 +21,7 @@ import math
 # Our own modules:
 import utils as u
 import rates
-import tax2023 as tx
+import tax2024 as tx
 
 ######################################################################
 
@@ -841,10 +841,13 @@ class Plan:
                              depRatio, self.names, True)
                 yincomeTax[n] = estimatedTax
                 ygrossIncome[n] = gross
-                # IRMAA looks back 2 years.
+                # Medicare IRMAA looks back 2 years.
                 irmaaIncome = ygrossIncome[max(0, n-2)]
-                yirmaa[n] = tx.irmaa(irmaaIncome, filingStatus,
-                                     self.yyear[n], self.rates)
+                for i in range(self.count):
+                    if self.y2ages[n][i] >= 65 and n <= self.horizons[i]:
+                        yirmaa[n] += tx.irmaa(irmaaIncome, filingStatus,
+                                              self.yyear[n], self.rates)
+
                 ynetIncome[n] = netInc
                 u.vprint('Adj. Income:\n Gross taxable:', d(ygrossIncome[n]),
                          'Tax bill:', d(yincomeTax[n]),
