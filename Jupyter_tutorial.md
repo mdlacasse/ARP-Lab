@@ -1,17 +1,3 @@
-# ARP Lab
-## A retirement planning laboratory
-
-This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring *what if* scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of your strategy under different market assumptions, helping to better understand one's financial situation.
-
-Many use Excel to build their own plans on different worksheets. But there is only so much one can do in Excel. This tool brings a little more capabilities and allows better planning by generating future scenarios under different assumptions and comparing them. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to test the success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing of a second house in your 60's, and so on. ARP Lab is currently appropriate for U.S. individuals as federal income tax calculations are automatically performed, but no state income tax are included as of now. If you're in Texas or Washington State, you're all set!
-
-ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter interface. So users need to be young enough to have some basic Python skills or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to be close to retirement. 
-
-Copyright Martin-D. Lacasse (2023)
-
-Disclaimer: I am not a financial planner. You make your own decisions. This program comes with no garanteee. Use at your own risk.
----------------------------------------------------------------------------------------------------------------------------------
-
 # Intro to Jupyter
 ## Installation
 Installation of Anaconda is relatively straightforward, just go to this [link](http://anaconda.com/), and click the download icon
@@ -70,3 +56,5 @@ To run a block of code, click on the box and the surrounding perimeter of that b
 The menu at the top of the page contains the main commands and will indicate the type of cell where the mouse is focusing. Clicking on run is another way to run the current cell, equivalent to *Shift-Enter*. It is also possible to run all the cells in the notebook by selecting *Run All* under the *Cell* (Jupyter) or *Run* (Jupyter Lab) headings. Notice all the shortcuts indicated in these menus, providing a keyboard alternative. Moreover, the *Help* tab contains a *User Interface Tour*, as well as reference to the Python langage and its most popular packages such as pandas and NumPy, for example. Use these references if needed. You should minimally read the *User Interface Tour* if you are new to Jupyter Notebook.
 
 If you want to run the all the commands in a notebook, just look under the *Run* menu and select *Run All*. For a fresh run, one can also select *Restart Kernel and Run All*.
+
+Copyright Martin-D. Lacasse (2023)
