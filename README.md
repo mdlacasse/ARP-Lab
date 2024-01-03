@@ -5,7 +5,7 @@ This package is a retirement modeling framework for exploring the sensitivity of
 
 Many use Excel to build their own plans using different worksheets. But there is only so much that one can do in Excel. This tool brings more capabilities, allowing for better planning by generating future scenarios under different market assumptions and graphing capabilites for comparing the different outcomes. Using this platfom, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to reproduce the historical success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing a second house in your 60's, and so on. ARP Lab is currently appropriate for U.S. individuals as federal income tax calculations are automatically performed, but no state income tax are included as of now. If you're in Texas or Washington State, you're all set!
 
-ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter notebook interface. So target users need to be young enough to have some basic Python skills or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to be close to retirement. 
+ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter notebook interface. Therefore, target users need to be young enough to have some basic Python skills (or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to contemplate retirement. 
 
 Copyright Martin-D. Lacasse (2023)
 
@@ -52,21 +52,19 @@ match your own assumptions. These include the following calls:
 
 ## Case studies
 ARP Lab comes with a few notebooks as examples:
-- [jack+jill](https://github.com/mdlacasse/ARP-Lab/blob/main/jack+jill.ipynb): describes the case of a couple about the enter retirement. This case introduces most of the capabilities of the ARP Lab platform.
+- [jack+jill](https://github.com/mdlacasse/ARP-Lab/blob/main/jack+jill.ipynb): describes the case of a ficticious couple about to enter retirement. This case introduces most of the capabilities of the ARP Lab platform.
 - [bengen_4%](https://github.com/mdlacasse/ARP-Lab/blob/main/bengen_4%.ipynb): reproduces the 4% rule proposed by Bill Bengen in 1994. It uses unrealistically small asset values to avoid triggering income tax.
 - [mary+john](https://github.com/mdlacasse/ARP-Lab/blob/main/mary+john.ipynb): explores the case of more elaborate asset allocation coordination schemes and its effect on final wealth.
 
 ## Tutorial
-The best way to start is to read the file called jack+jill.ipynb. This file is meant to be run in jupyter notebook, but the file can also be read in preview mode. Once familiar with its contents, go to the next section that will get you started.
+The best way to start is to read the example files described above. These files are meant to be run in a jupyter notebook, but these files can also be read in preview mode. Once familiar with their contents, go to the next section that will get you started.
 
 ## Requirements to run this program
-ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebook. Therefore, I recommend installing *Anaconda* on your computer. It can be found at anaconda.com. Follow the instruction below to install anaconda on your computer.
-
-The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations.
+ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jupyter* notebooks. Therefore, I strongly recommend installing *Anaconda* on your computer. It can be found at [anaconda.com](https://anaconda.com). Follow the instructions in the Jupyter tutorial included (link below) for installing anaconda on your computer. The Jupyter Notebook interface is a Web-based application for authoring documents that combine live-code with narrative text, equations and visualizations. Jupyter will run in your default web browser, from your computer to your browser, and therefore no data is ever transferred on the Internet (your computer, i.e., `localhost`, is the server).
 
 You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
 
-The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary is given [here](https://github.com/mdlacasse/ARP-Lab/blob/main/Jupyter_tutorial.md).
+The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary including installation procedures is given [here](https://github.com/mdlacasse/ARP-Lab/blob/main/Jupyter_tutorial.md).
 
 ### Getting started
 To run the demo version describing a hypothetical case:
@@ -81,6 +79,6 @@ To edit files and run your own cases:
 2) Rename the copied files to something relevant to your case, say *kim+sam.ipynb* and *kim+sam.xlsx* if you are Kim and Sam.
 3) Edit each tab of the *kim+sam.xlsx* file to reflect your names, wages, contributions, and large financial events (a.k.a., big-ticket items).
 4) Open *kim+sam.ipynb* notebook in the JupyterLab interface.
-5) Add the additional information and assumption required to run a case;
+5) Add the additional information and assumptions required to run a case;
 6) Give me some feedback for improvement.
 
