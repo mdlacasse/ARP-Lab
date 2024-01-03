@@ -257,7 +257,7 @@ class Plan:
 
         self.coordinatedAR = scope
         u.vprint('Coordinating', scope, 'assets allocation ratios (%):\n',
-                 'initial:', initial, '\n  final:', final)
+                 'initial:', initial, '\n   final:', final)
 
         return
 
