@@ -2186,13 +2186,14 @@ def optimizeRoth(p, txrate):
     txrate /= 100
 
     prevState = u.setVerbose(False)
-    p2.run()
-    baseValue, mul = p2._estate(txrate)
 
     # Start by zeroing all RothX in cloned plan.
     for i in range(p2.count):
         for n in range(p2.horizons[i]):
             p2.timeLists[i]['Roth X'][n] = 0
+
+    p2.run()
+    baseValue, mul = p2._estate(txrate)
 
     # bestX = _sequentialRoth(p2, baseValue, txrate)
     bestX = _montecarloRoth(p2, baseValue, txrate)
