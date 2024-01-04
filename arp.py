@@ -2148,11 +2148,13 @@ def _montecarloRoth(p2, baseValue, txrate):
         n = int(random.random()*p2.horizons[i])
         xnow = p2.timeLists[i]['Roth X'][n]
 
-        # By construction, xnow >= myConv.
         if xnow > 0 and random.random() > 0.5:
             rothX *= -1
 
-        rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
+        if rothX < 0:
+            rothX = int(max(rothX, -xnow))
+        else:
+            rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
 
         p2.timeLists[i]['Roth X'][n] += rothX
         p2.run()
@@ -2186,11 +2188,12 @@ def _annealRoth(p2, baseValue, txrate):
     preValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     trials = 0
-    kB = minConv/50000
-    counter = 0
+    kB = minConv/500
+    numAttempts = p2.count*30*7
 
-    for T in range(100, 0, -2):
-        for k in range(0, p2.count*30*5):
+    for T in range(100, 0, -1):
+        flipCount = 0
+        for k in range(0, numAttempts):
             trials += 1
             if trials % 100 == 0:
                 print('.', end='')
@@ -2219,10 +2222,9 @@ def _annealRoth(p2, baseValue, txrate):
                     random.random() < math.exp((newValue-preValue)/kB*T):
                 preValue = newValue
                 bestX[n][i] = p2.timeLists[i]['Roth X'][n]
-                counter = 0
+                flipCount += 1
             else:
                 p2.timeLists[i]['Roth X'][n] -= rothX
-                counter += 1
 
             '''
             # Swap two entries.
@@ -2238,7 +2240,8 @@ def _annealRoth(p2, baseValue, txrate):
             p2.timeLists[i]['Roth X'][n2] += xRoth2
             '''
 
-    print('\nCounter value', counter)
+        print('\nT:', T, 'Success rate:', flipCount/numAttempts)
+
     print('\nReturning after', trials, 'trials.')
 
     return bestX
