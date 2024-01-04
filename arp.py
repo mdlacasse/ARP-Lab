@@ -708,6 +708,7 @@ class Plan:
                 # but are taxable events.
                 # We will add them separately to taxable income we call gross.
                 reqRoth = self.timeLists[i]['Roth X'][n]
+                assert reqRoth >= 0
                 tmp = min(reqRoth, ya2taxDef[n][i])
                 if tmp != reqRoth:
                     u.vprint('WARNING:',
@@ -1870,12 +1871,28 @@ def checkTimeLists(names, timeLists, horizons):
 
     # Verify that year range covers life expectancy for each individual
     now = datetime.date.today().year
-    for i in range(0, len(names)):
+    for i in range(len(names)):
         yend = now + horizons[i]
         if timeLists[i]['year'][-1] < yend:
             u.xprint('Time horizon for', names[i],
                      'is too short.\n\tIt should end in', yend,
                      'but ends in', timeLists[i]['year'][-1])
+
+    timeHorizonItems = ['year',
+                        'anticipated income',
+                        'ctrb taxable',
+                        'ctrb 401k',
+                        'ctrb Roth 401k',
+                        'ctrb IRA',
+                        'ctrb Roth IRA',
+                        'Roth X',
+                        ]
+
+    # Verify that all numbers except bti are positive.
+    for i in range(len(names)):
+        for n in range(horizons[i]):
+            for item in timeHorizonItems:
+                assert timeLists[i][item][i] >= 0
 
     return
 
@@ -2107,7 +2124,7 @@ def _montecarloRoth(p2, baseValue, txrate):
     print('Each dot represents 100 different scenarios tested:')
 
     # Start with a power 2 granularity
-    myConv = 16000
+    myConv = 32000
     minConv = 500
     maxValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
@@ -2120,9 +2137,9 @@ def _montecarloRoth(p2, baseValue, txrate):
             print('.', end='')
             if trials % 1000 == 0:
                 print()
-        
+
         # 30 y x 8 shots gives 127/128 probability of visit.
-        if myConv > minConv and counter > p2.count*240:
+        if myConv > minConv and counter > p2.count*360:
             myConv /= 2
             counter = 0
 
@@ -2134,12 +2151,10 @@ def _montecarloRoth(p2, baseValue, txrate):
         # By construction, xnow >= myConv.
         if xnow > 0 and random.random() > 0.5:
             rothX *= -1
-        elif rothX > int(p2.y2accounts['tax-deferred'][n][i]):
-            # Not enough left to convert.
-            counter += 1
-            continue
 
-        p2.timeLists[i]['Roth X'][n] += int(rothX)
+        rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
+
+        p2.timeLists[i]['Roth X'][n] += rothX
         p2.run()
 
         newValue, mul2 = p2._estate(txrate)
@@ -2151,6 +2166,79 @@ def _montecarloRoth(p2, baseValue, txrate):
             p2.timeLists[i]['Roth X'][n] -= int(rothX)
             counter += 1
 
+    print('\nReturning after', trials, 'trials.')
+
+    return bestX
+
+
+def _annealRoth(p2, baseValue, txrate):
+    '''
+    Determine best Roth conversions through annealing approach.
+    Minimum conversion considered is $500.
+    '''
+    import random
+    random.seed()
+
+    print('Starting Roth optimizer. This calculation takes about 5 min.')
+    print('Each dot represents 100 different scenarios tested:')
+
+    minConv = 500
+    preValue = baseValue
+    bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
+    trials = 0
+    kB = minConv/50000
+    counter = 0
+
+    for T in range(100, 0, -2):
+        for k in range(0, p2.count*30*5):
+            trials += 1
+            if trials % 100 == 0:
+                print('.', end='')
+                if trials % 1000 == 0:
+                    print()
+
+            # Single move.
+            rothX = minConv
+            i = int(random.random()*p2.count)
+            n = int(random.random()*p2.horizons[i])
+            xnow = p2.timeLists[i]['Roth X'][n]
+
+            if xnow > 0 and random.random() > 0.5:
+                rothX *= -1
+
+            if rothX < 0:
+                rothX = int(max(rothX, -xnow))
+            else:
+                rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
+
+            p2.timeLists[i]['Roth X'][n] += rothX
+            p2.run()
+
+            newValue, mul2 = p2._estate(txrate)
+            if newValue >= preValue or \
+                    random.random() < math.exp((newValue-preValue)/kB*T):
+                preValue = newValue
+                bestX[n][i] = p2.timeLists[i]['Roth X'][n]
+                counter = 0
+            else:
+                p2.timeLists[i]['Roth X'][n] -= rothX
+                counter += 1
+
+            '''
+            # Swap two entries.
+            i = int(random.random()*p2.count)
+            n1 = int(random.random()*p2.horizons[i])
+            xnow1 = p2.timeLists[i]['Roth X'][n1]
+            n2 = int(random.random()*p2.horizons[i])
+            xnow2 = p2.timeLists[i]['Roth X'][n2]
+            delta = xnow2 - xnow1
+            xRoth1 = int(min(delta, p2.y2accounts['tax-deferred'][n1][i]))
+            xRoth2 = int(min(-delta, xnow2))
+            p2.timeLists[i]['Roth X'][n1] += xRoth1
+            p2.timeLists[i]['Roth X'][n2] += xRoth2
+            '''
+
+    print('\nCounter value', counter)
     print('\nReturning after', trials, 'trials.')
 
     return bestX
@@ -2207,7 +2295,8 @@ def optimizeRoth(p, txrate):
     baseValue, mul = p2._estate(txrate)
 
     # bestX = _sequentialRoth(p2, baseValue, txrate)
-    bestX = _montecarloRoth(p2, baseValue, txrate)
+    # bestX = _montecarloRoth(p2, baseValue, txrate)
+    bestX = _annealRoth(p2, baseValue, txrate)
 
     p2.run()
     newValue, mul = p2._estate(txrate)
