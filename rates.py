@@ -17,7 +17,7 @@ Copyright -- Martin-D. Lacasse (2023)
 
 Last updated: December 2023
 
-Disclaimer: This program comes with no garantee. Use at your own risk.
+Disclaimer: This program comes with no guarantee. Use at your own risk.
 
 '''
 

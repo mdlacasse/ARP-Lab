@@ -2104,31 +2104,42 @@ def _montecarloRoth(p2, baseValue, txrate):
     random.seed()
 
     print('Starting Roth optimizer. This calculation takes about 5 min.')
-    print('Each dot represents 1,000 different scenarios tested:', end='')
+    print('Each dot represents 100 different scenarios tested:')
 
-    minConv = 2000
+    # Start with a power 2 granularity
+    myConv = 16000
+    minConv = 500
     maxValue = baseValue
-    bestX = np.zeros((p2.maxHorizon, p2.count))
+    bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     counter = 0
     trials = 0
-    # Quit after 1000 missed shots.
-    while counter < 1000:
+    # Quit after 1200 missed shots for couples.
+    while counter < p2.count*600:
         trials += 1
-        if trials % 1000 == 0:
+        if trials % 100 == 0:
             print('.', end='')
+            if trials % 1000 == 0:
+                print()
+        
+        # 30 y x 8 shots gives 127/128 probability of visit.
+        if myConv > minConv and counter > p2.count*240:
+            myConv /= 2
+            counter = 0
 
+        rothX = myConv
         i = int(random.random()*p2.count)
         n = int(random.random()*p2.horizons[i])
-        rothX = int(min(p2.y2accounts['tax-deferred'][n][i], minConv))
-        if rothX < minConv:
+        xnow = p2.timeLists[i]['Roth X'][n]
+
+        # By construction, xnow >= myConv.
+        if xnow > 0 and random.random() > 0.5:
+            rothX *= -1
+        elif rothX > int(p2.y2accounts['tax-deferred'][n][i]):
+            # Not enough left to convert.
             counter += 1
             continue
 
-        xnow = p2.timeLists[i]['Roth X'][n]
-        if xnow > 0 and random.random() > 0.5:
-            rothX *= -1
-
-        p2.timeLists[i]['Roth X'][n] += rothX
+        p2.timeLists[i]['Roth X'][n] += int(rothX)
         p2.run()
 
         newValue, mul2 = p2._estate(txrate)
@@ -2137,7 +2148,7 @@ def _montecarloRoth(p2, baseValue, txrate):
             bestX[n][i] = p2.timeLists[i]['Roth X'][n]
             counter = 0
         else:
-            p2.timeLists[i]['Roth X'][n] -= rothX
+            p2.timeLists[i]['Roth X'][n] -= int(rothX)
             counter += 1
 
     print('\nReturning after', trials, 'trials.')
@@ -2152,7 +2163,7 @@ def _sequentialRoth(p2, baseValue, txrate):
     '''
     minConv = 2000
     maxValue = baseValue
-    bestX = np.zeros((p2.maxHorizon, p2.count))
+    bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     for i in range(p2.count):
         for n in range(p2.horizons[i]):
             print('Analyzing year', n, 'for', p2.names[i])
