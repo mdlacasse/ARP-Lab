@@ -2112,10 +2112,12 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     return fig, ax
 
 
-def _amountAnnealRoth(p2, baseValue, txrate):
+def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     '''
-    Determine best Roth conversions through Monte Carlo approach.
-    Minimum conversion considered is $500.
+    Determine best Roth conversions through Monte Carlo approach,
+    starting from large conversion being reduced by half over simulation.
+    Minimum conversion considered is minConv. Starting conversion
+    amount is startConv.
     '''
     import random
     random.seed()
@@ -2124,24 +2126,19 @@ def _amountAnnealRoth(p2, baseValue, txrate):
     print('Each dot represents 100 different scenarios tested:')
 
     # Start with a power 2 granularity.
-    myConv = 32000
-    minConv = 500
+    myConv = startConv
     maxValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     counter = 0
     trials = 0
+
     # Quit after twice missed shots.
-    while counter < p2.count*600:
+    while myConv >= minConv:
         trials += 1
         if trials % 100 == 0:
             print('.', end='')
             if trials % 1000 == 0:
-                print()
-
-        # 30 y x 10 shots gives 1023/1024 probability of visit.
-        if myConv > minConv and counter > p2.count*300:
-            myConv /= 2
-            counter = 0
+                print() 
 
         rothX = myConv
         i = int(random.random()*p2.count)
@@ -2169,15 +2166,21 @@ def _amountAnnealRoth(p2, baseValue, txrate):
             p2.timeLists[i]['Roth X'][n] -= int(rothX)
             counter += 1
 
+        # 30 y x 10 shots gives 1023/1024 probability of visit.
+        if counter > p2.count*240:
+            myConv /= 2
+            counter = 0
+
+
     print('\nReturning after', trials, 'trials.')
 
     return bestX
 
 
-def _tempAnnealRoth(p2, baseValue, txrate):
+def _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     '''
     Determine best Roth conversions through annealing approach.
-    Minimum conversion considered is $500.
+    Minimum conversion considered is minConv.
     '''
     import random
     random.seed()
@@ -2185,7 +2188,6 @@ def _tempAnnealRoth(p2, baseValue, txrate):
     print('Starting Roth optimizer. This calculation takes about 5 min.')
     print('Each dot represents 100 different scenarios tested:')
 
-    minConv = 500
     preValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     trials = 0
@@ -2250,12 +2252,11 @@ def _tempAnnealRoth(p2, baseValue, txrate):
     return bestX
 
 
-def _sweepRoth(p2, baseValue, txrate):
+def _sweepRoth(p2, baseValue, txrate, minConv):
     '''
     Determine best Roth conversions through trial and error sweep.
     Fast but not really good as results are not close to optimal.
     '''
-    minConv = 1000
     maxValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     for i in range(p2.count):
@@ -2281,7 +2282,7 @@ def _sweepRoth(p2, baseValue, txrate):
     return bestX
 
 
-def optimizeRoth(p, txrate):
+def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     '''
     Determines optimal Roth conversions.
     Goal is to maximize estate given a tax-deferred tax rate.
@@ -2299,9 +2300,9 @@ def optimizeRoth(p, txrate):
     p2.run()
     baseValue, mul = p2._estate(txrate)
 
-    # bestX = _sweepRoth(p2, baseValue, txrate)
-    # bestX = _tempAnnealRoth(p2, baseValue, txrate)
-    bestX = _amountAnnealRoth(p2, baseValue, txrate)
+    # bestX = _sweepRoth(p2, baseValue, txrate, minConv, startConv)
+    # bestX = _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv)
+    bestX = _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv)
     p2.run()
     newValue, mul = p2._estate(txrate)
     print('Estate increased from', d(baseValue), 'to', d(newValue),
