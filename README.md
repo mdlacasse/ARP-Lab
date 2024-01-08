@@ -18,12 +18,12 @@ created from historical statistics. It has many graphing capabilities as well as
 
 There are currently 4 classes of assets supported in ARP Lab:
 
-- Assets tracking the S&P 500 index
-- Assets represented by corporate bonds Baa
-- ASsets represetned by 10-year Treasury bonds
-- Common assets tracking inflation
+- Assets tracking the S&P 500 index;
+- Assets representative of corporate bonds Baa;
+- Assets similar to the 10-year Treasury bonds;
+- Common assets tracking inflation.
 
-The goal of ARP lab is not to be able to track all available indices and assets, but rather to allow choosing from a limited selection of classes of assets representative of dissimilar volatilities and returns.
+The goal of ARP lab is not to be able to track all available indices and assets, but rather to allow choosing from a limited selection of classes of assets representative of dissimilar volatilities and returns. New classes of assets could easily be added to ARP Lab, but it would be at the cost of complicating the user's experience. 
 
 ## Rules and assumptions
 ARP Lab relies on a few implicit assumptions:
