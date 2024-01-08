@@ -1,11 +1,11 @@
 # ARP Lab
 ## A retirement planning laboratory
 
-This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring *what if* scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean that one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of a given strategy under different market assumptions, helping to better understand one's financial situation.
+This package is a retirement modeling framework for exploring the sensitivity of retirement financial decisions. Strictly speaking, it is not a planning tool, but more an environment for exploring *what if* scenarios. It provides different realizations of a financial strategy. One can certainly have a savings plan, but due to the volatility of financial investments, it is impossible to have an exact and certain asset earnings plan. Moreover, it is very likely that tax laws will change in the future. That does not mean that one cannot make decisions. This is where this tool fits it. Given your savings and spending desires, it can generate different future realizations of a given strategy under different market assumptions, helping to better understand one's financial situation, and the impact of near-term and future decisions.
 
-Many use Excel to build their own plans using different worksheets. But there is only so much that one can do in Excel. This tool brings more capabilities, allowing for better planning by generating future scenarios under different market assumptions and graphing capabilities for comparing the different outcomes. Using this platform, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to reproduce the historical success of a 4% withdrawal rate, the effect of a part-time income at retirement, the possibility of purchasing a second house in your 60's, and so on. ARP Lab is currently appropriate for U.S. individuals as federal income tax calculations are automatically performed, but no state income tax are included as of now. If you're in Texas or Washington State, you're all set!
+Many individuals contemplating retirement use Excel to build their own plans, often involving different worksheets. But there is only so much that one can do in Excel. ARP Lab brings more capabilities, allowing for better planning by generating future scenarios under different market assumptions and providing easy graphing capabilities for comparing the different outcomes. Using this platform, one can test the robustness of a retirement plan under historical or statistical rates of return and inflation. It can also be used to reproduce the historical success of a 4% withdrawal rate, measure the effect of a part-time income at retirement, compare different strategies for Roth conversions, evaluate the possibility of purchasing a second house in your 60's, and so on. ARP Lab is currently appropriate for U.S. individuals as federal income tax calculations are automatically performed. However, no state income tax are currenty included, but they can easily be. If you're in Texas or Washington State, you're all set!
 
-ARP Lab requires some basic programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter notebook interface. Therefore, target users need to be young enough to have some basic Python skills (or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to contemplate retirement. 
+ARP Lab requires some rudimentary programming skills. It is written in Python and designed so that user-friendly functions can be called through an interactive jupyter notebook interface. Therefore, target users need to be young enough to have some basic Python skills (or at least have enough intellectual plasticity left to acquire those skills ;-), while being old enough to contemplate retirement. 
 
 Copyright Martin-D. Lacasse (2023)
 
@@ -14,7 +14,8 @@ Disclaimer: I am not a financial planner. You make your own decisions. This prog
 
 ## Capabilities
 ARP Lab contains historical data from 1928 to last year and can generate scenarios using this data, or using random data
-created from historical statistics. It has many graphing capabilities as well as many heuristics for optimizing wealth over the time span of a scenario. These include smart banking strategies, coordinated assets allocations between types of accounts and between spouses, and a Roth conversion optimizer using a stochastic approach. 
+created from historical statistics. It has many graphing capabilities as well as many heuristics for optimizing wealth over the time span of a scenario.
+These include smart banking strategies, coordinated assets allocations between types of accounts and optionally between spouses, and a Roth conversion optimizer using a stochastic approach. 
 
 There are currently 4 classes of assets supported in ARP Lab:
 
@@ -40,8 +41,9 @@ ARP Lab relies on a few implicit assumptions:
 - No estate tax calculations are included. Only tax on the tax-deferred portion of the estate is accounted for when reporting estate value in today's $;
 - For spouses, surplus over the desired joint income will be deposited in taxable accounts proportionally to that year's spousal income ratio;
 - Tax and IRMAA brackets are assumed to follow inflation;
+- Roth conversions are assumed to be done at the beginning of the year;
 - Social security benefits are assumed to be adjusted for inflation;
-- Most importantly, tax rules are projected in the future without any consideration on likely changes to happen with new administrations. As of this release, the tax code of 2017 is assumed to be returning at the expiration of the TCJA after 2025.
+- Most importantly, tax rules are only inflation-adjusted and projected in the future without any consideration on likely changes to happen with new administrations. As of this release, the tax code of 2017 is assumed to be returning at the expiration of the TCJA after 2025.
 
 ## Default values for parameters
 When a new plan is created, ARP Lab will list all the default assumptions as a reminder. All these parameters can be changed with simple commands.
@@ -57,12 +59,12 @@ The default choices include:
 These choices have no particular value, except to provide a default case that one can run for demonstration purposes.
 It is anticipated that you will change these default values by using `set___()` functions. The *jack+jill* notebook contains configuration examples describing how to make these values
 match your own assumptions. These include the following calls:
-    `setInitialAR()`, `setFinalAR()`LL, `setSurvivorFraction()`, `setSpousalSplit()`, `setDeferredTaxRate()`,  `setRates()`, for examples.
+    `setInitialAR()`, `setFinalAR()`, `setSurvivorFraction()`, `setSpousalSplit()`, `setDeferredTaxRate()`,  `setRates()`, for examples.
 
 ## Case studies
 ARP Lab comes with a few notebooks as examples:
 - [jack+jill](https://github.com/mdlacasse/ARP-Lab/blob/main/jack+jill.ipynb): describes the case of a fictitious couple about to enter retirement. This case introduces most of the capabilities of the ARP Lab platform.
-- [bengen_4%](https://github.com/mdlacasse/ARP-Lab/blob/main/bengen_4%.ipynb): reproduces the 4% rule proposed by Bill Bengen in 1994. It uses unrealistically small asset values to avoid triggering income tax.
+- [bengen_4%](https://github.com/mdlacasse/ARP-Lab/blob/main/bengen_4%.ipynb): reproduces the 4% rule proposed by Bill Bengen in 1994. It uses unrealistically small asset values to avoid triggering income tax which were not considered in the original paper.
 - [mary+john](https://github.com/mdlacasse/ARP-Lab/blob/main/mary+john.ipynb): explores the case of more elaborate asset allocation coordination schemes and its effect on final wealth.
 - [roth](https://github.com/mdlacasse/ARP-Lab/blob/main/roth.ipynb): looks at Roth conversions for a couple with tax-deferred assets.
 
@@ -74,10 +76,10 @@ ARP Lab is coded in Python and is best run using either the *JupyterLab* or *jup
 
 You will also need the capability to read and edit Excel files. One can have an Excel license, or use the LibreOffice free alternative.
 
-The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in JupyterLab is made to be relatively easy. There are many tutorials on that topic and a summary including installation procedures is given [here](https://github.com/mdlacasse/ARP-Lab/blob/main/Jupyter_tutorial.md).
+The intent of using a notebook is that one can configure calculations that suit one's needs. Moreover, running calculations in *jupyter* is made to be relatively easy. There are many tutorials on this topic and a summary including installation procedures is given [here](https://github.com/mdlacasse/ARP-Lab/blob/main/Jupyter_tutorial.md).
 
 ### Getting started
-To run the demo version describing a hypothetical case:
+To run the demo version describing the case of Jack ad Jill, a ficticious couple entering retirement:
 1) Start the Anaconda Navigator. This has a green circle representative icon.
 2) Launch a JupyterLab session by clicking *Launch* under the *JupyterLab* icon.
 3) Using the navigation panel on the left, get to the directory where you unzipped ARP Lab.
