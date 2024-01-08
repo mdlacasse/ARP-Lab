@@ -16,6 +16,15 @@ Disclaimer: I am not a financial planner. You make your own decisions. This prog
 ARP Lab contains historical data from 1928 to last year and can generate scenarios using this data, or using random data
 created from historical statistics. It has many graphing capabilities as well as many heuristics for optimizing wealth over the time span of a scenario. These include smart banking strategies, coordinated assets allocations between types of accounts and between spouses, and a Roth conversion optimizer using a Monte Carlo approach. 
 
+There are currently 4 classes of assets supported in ARP Lab:
+
+- Assets tracking the S&P 500 index
+- Assets represented by corporate bonds Baa
+- ASsets represetned by 10-year Treasury bonds
+- Common assets tracking inflation
+
+The goal of ARP lab is not to be able to track all available indices and assets, but rather to allow choosing from a limited selection of classes of assets representative of dissimilar volatilities and returns.
+
 ## Rules and assumptions
 ARP Lab relies on a few implicit assumptions:
 
