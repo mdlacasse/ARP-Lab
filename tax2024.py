@@ -14,6 +14,8 @@ Disclaimer: This program comes with no guarantee. Use at your own risk.
 '''
 
 ######################################################################
+import numpy as np
+
 # Our own required modules:
 import utils as u
 
@@ -122,10 +124,11 @@ def rmdFraction(year, yob):
     needs to be distributed.
     '''
 
-    table = [27.4, 26.5, 25.5, 24.6, 23.7, 22.9, 22.0, 21.1, 20.2, 19.4, 18.5,
-             17.7, 16.8, 16.0, 15.2, 14.4, 13.7, 12.9, 12.2, 11.5, 10.8, 10.1,
-             9.5, 8.9, 8.4, 7.8, 7.3, 6.8, 6.4, 6.0, 5.6, 5.2, 4.9, 4.6
-             ]
+    rmdTable = [27.4, 26.5, 25.5, 24.6, 23.7, 22.9, 22.0, 21.1,
+                20.2, 19.4, 18.5, 17.7, 16.8, 16.0, 15.2, 14.4,
+                13.7, 12.9, 12.2, 11.5, 10.8, 10.1, 9.5, 8.9,
+                8.4, 7.8, 7.3, 6.8, 6.4, 6.0, 5.6, 5.2, 4.9, 4.6
+                ]
 
     yage = year - yob
     # Account for increase of RMD age between 2023 and 2032.
@@ -133,7 +136,110 @@ def rmdFraction(year, yob):
             or (yage < 72):
         return 0
 
-    return 1./table[yage-72]
+    return 1./rmdTable[yage-72]
+
+
+# TCJA rates
+# Married filing jointly. Keys are 'up to' while values are tax rates.
+tax2024_MFJ = {23200: 0.10,
+               94300: 0.12,
+               201050: 0.22,
+               383900: 0.24,
+               487450: 0.32,
+               731200: 0.35,
+               99999999: 0.37
+               }
+
+# Single
+tax2024_S = {11600: 0.10,
+             47150: 0.12,
+             100525: 0.22,
+             191950: 0.24,
+             243725: 0.32,
+             609350: 0.35,
+             99999999: 0.37
+             }
+
+'''
+# Original 2017 rates
+# Married filing jointly
+tax2017_MFJ = {18650: 0.10,
+               75900: 0.15,
+               153100: 0.25,
+               233350: 0.28,
+               416700: 0.33,
+               470700: 0.35,
+               99999999: 0.396
+               }
+
+# Single
+tax2017_S = {9325: 0.10,
+             37950: 0.15,
+             91900: 0.25,
+             191650: 0.28,
+             416700: 0.33,
+             418400: 0.35,
+             99999999: 0.396
+             }
+'''
+
+# 2017 rates inflation-adjusted to 2024 (+30.0% increase)
+# Married filing jointly
+tax2017_MFJ = {24200: 0.10,
+               98700: 0.15,
+               199000: 0.25,
+               303350: 0.28,
+               541700: 0.33,
+               611900: 0.35,
+               99999999: 0.396
+               }
+
+# Single
+tax2017_S = {12100: 0.10,
+             49300: 0.15,
+             119500: 0.25,
+             249100: 0.28,
+             541700: 0.33,
+             543900: 0.35,
+             99999999: 0.396
+             }
+
+
+def taxBrackets(status, horizon, rates):
+    '''
+    Return dictionary containing inflation-adjusted future tax
+    brackets for plotting.
+    '''
+    # brackets = ['10%', '12/15%', '22/25%', '24/28%',
+    #             '32/33%', '35%', '37/40%']
+    # Skip the first bracket and last one.
+    # By given that values of dic are 'up to' we need to shift by one anyway.
+    shift = 0
+    brackets = ['12/15%', '22/25%', '24/28%', '32/33%', '35%', '37/40%']
+
+    if status == 'married':
+        list1 = list(tax2017_MFJ.keys())
+        list2 = list(tax2024_MFJ.keys())
+    elif status == 'single':
+        list1 = list(tax2017_S.keys())
+        list2 = list(tax2024_S.keys())
+    else:
+        u.xprint('Unknown status', status)
+
+    data = {}
+    for k in range(len(brackets)):
+        array = np.zeros(horizon)
+        for n in range(horizon):
+            if n < 2:
+                v = list1[k + shift]
+            else:
+                v = list2[k + shift]
+
+            array[n] = inflationAdjusted(v, n, rates)
+
+        data[brackets[k]] = array
+
+    return data
 
 
 def incomeTax(agi, yobs, filingStatus, year, rates):
@@ -141,71 +247,6 @@ def incomeTax(agi, yobs, filingStatus, year, rates):
     Return tax liability for a given income.
     Married filing jointly or single status only.
     '''
-    # TCJA rates
-    # Married filing jointly
-    tax2024_MFJ = {23200: 0.10,
-                   94300: 0.12,
-                   201050: 0.22,
-                   383900: 0.24,
-                   487450: 0.32,
-                   731200: 0.35,
-                   99999999: 0.37
-                   }
-
-    # Single
-    tax2024_S = {11600: 0.10,
-                 47150: 0.12,
-                 100525: 0.22,
-                 191950: 0.24,
-                 243725: 0.32,
-                 609350: 0.35,
-                 99999999: 0.37
-                 }
-
-    '''
-    # Original 2017 rates
-    # Married filing jointly
-    tax2017_MFJ = {18650: 0.10,
-                   75900: 0.15,
-                   153100: 0.25,
-                   233350: 0.28,
-                   416700: 0.33,
-                   470700: 0.35,
-                   99999999: 0.396
-                   }
-
-    # Single
-    tax2017_S = {9325: 0.10,
-                 37950: 0.15,
-                 91900: 0.25,
-                 191650: 0.28,
-                 416700: 0.33,
-                 418400: 0.35,
-                 99999999: 0.396
-                 }
-    '''
-
-    # 2017 rates inflation-adjusted to 2024 (+30.0% increase)
-    # Married filing jointly
-    tax2017_MFJ = {24200: 0.10,
-                   98700: 0.15,
-                   199000: 0.25,
-                   303350: 0.28,
-                   541700: 0.33,
-                   611900: 0.35,
-                   99999999: 0.396
-                   }
-
-    # Single
-    tax2017_S = {12100: 0.10,
-                 49300: 0.15,
-                 119500: 0.25,
-                 249100: 0.28,
-                 541700: 0.33,
-                 543900: 0.35,
-                 99999999: 0.396
-                 }
-
     taxbleIncome = agi - stdDeduction(yobs, filingStatus, year, rates)
 
     if filingStatus == 'single':

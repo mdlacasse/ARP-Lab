@@ -712,7 +712,8 @@ class Plan:
                 tmp = min(reqRoth, ya2taxDef[n][i])
                 if tmp != reqRoth:
                     u.vprint('WARNING:',
-                             'Insufficient funds for Roth conversion for',
+                             'Insufficient funds for', d(reqRoth),
+                             'Roth conversion for',
                              self.names[i], 'in', self.yyear[n])
                 if tmp > 0:
                     u.vprint(self.names[i], 'requested Roth conversion:',
@@ -1062,12 +1063,12 @@ class Plan:
         if tag != '':
             title += ' - '+tag
 
-        data = {'net': '-', 'target': ':'}
-        self._lineIncomePlot(data, title)
+        style = {'net': '-', 'target': ':'}
+        self._lineIncomePlot(style, title)
 
         return
 
-    def _lineIncomePlot(self, data, title):
+    def _lineIncomePlot(self, style, title):
         '''
         Core line plotter function.
         '''
@@ -1077,9 +1078,9 @@ class Plan:
         fig, ax = plt.subplots(figsize=(6, 3))
         plt.grid(visible='both')
 
-        for aType in data:
+        for aType in style:
             ax.plot(self.yyear, self.yincome[aType],
-                    label=aType, ls=data[aType])
+                    label=aType, ls=style[aType])
 
         ax.legend(loc='upper left', reverse=True, fontsize=8)
         # ax.legend(loc='upper left')
@@ -1102,18 +1103,22 @@ class Plan:
         if tag != '':
             title += ' - '+tag
 
-        data = {'gross': '-'}
+        style = {'gross': '-'}
 
-        fig, ax = self._lineIncomePlot(data, title)
+        fig, ax = self._lineIncomePlot(style, title)
 
+        data = tx.taxBrackets(self.status, self.maxHorizon, self.rates)
+
+        '''
         myyears = np.array([2022, 2025, 2026, 2052])
         tax2428 = np.array([178000, 220000, 205000, 400000])
         tax3233 = np.array([340000, 405000, 310000, 600000])
         tax35 = np.array([432000, 500000, 580000, 1000000])
+        '''
 
-        ax.plot(myyears, tax2428, label='24/28%', ls=':')
-        ax.plot(myyears, tax3233, label='32/33%', ls=':')
-        ax.plot(myyears, tax35, label='35%', ls=':')
+        for key in data:
+            ax.plot(self.yyear, data[key], label=key, ls=':')
+
         plt.grid(visible='both')
         ax.legend(loc='upper left', reverse=True, fontsize=8)
         # ax.legend(loc='upper left')
@@ -2115,62 +2120,63 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
 def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     '''
     Determine best Roth conversions through Monte Carlo approach,
-    starting from large conversion being reduced by half over simulation.
-    Minimum conversion considered is minConv. Starting conversion
-    amount is startConv.
+    starting from large conversions being reduced by half over the
+    simulation. Starting conversion amount is startConv.
+    Minimum conversion considered is minConv.
     '''
     import random
     random.seed()
 
-    print('Starting Roth optimizer. This calculation takes about 5 min.')
+    print('Starting Roth optimizer. This calculation takes a few minutes.')
     print('Each dot represents 100 different scenarios tested:')
 
-    # Start with a power 2 granularity.
     myConv = startConv
     maxValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
     counter = 0
     trials = 0
 
-    # Quit after twice missed shots.
+    i = 0
     while myConv >= minConv:
-        trials += 1
-        if trials % 100 == 0:
-            print('.', end='')
-            if trials % 1000 == 0:
-                print() 
+        for n in np.random.permutation(p2.horizons[i]):
+            rothX = myConv
+            xnow = p2.timeLists[i]['Roth X'][n]
 
-        rothX = myConv
-        i = int(random.random()*p2.count)
-        n = int(random.random()*p2.horizons[i])
-        xnow = p2.timeLists[i]['Roth X'][n]
+            # If xnow > 0, we can reverse conversion.
+            if xnow > 0 and random.random() < 0.5:
+                rothX *= -1
 
-        # If xnow > 0, xnow >= rothX by construction.
-        if xnow > 0 and random.random() > 0.5:
-            rothX *= -1
+            if rothX < 0:
+                rothX = int(max(rothX, -xnow))
+            else:
+                rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
 
-        if rothX < 0:
-            rothX = int(max(rothX, -xnow))
-        else:
-            rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
+            p2.timeLists[i]['Roth X'][n] += rothX
+            p2.run()
 
-        p2.timeLists[i]['Roth X'][n] += rothX
-        p2.run()
+            newValue, mul2 = p2._estate(txrate)
+            if newValue > maxValue:
+                maxValue = newValue
+                bestX[n][i] = p2.timeLists[i]['Roth X'][n]
+                counter = 0
+            else:
+                p2.timeLists[i]['Roth X'][n] -= int(rothX)
+                counter += 1
 
-        newValue, mul2 = p2._estate(txrate)
-        if newValue > maxValue + 0.01:
-            maxValue = newValue
-            bestX[n][i] = p2.timeLists[i]['Roth X'][n]
-            counter = 0
-        else:
-            p2.timeLists[i]['Roth X'][n] -= int(rothX)
-            counter += 1
+            trials += 1
+            if trials % 100 == 0:
+                print('.', end='')
+                if trials % 1000 == 0:
+                    print()
 
-        # 30 y x 10 shots gives 1023/1024 probability of visit.
-        if counter > p2.count*240:
+        # If nothing happened during last rounds:
+        # we divide amount. Factor 2 for random reversal.
+        if counter > 2*sum(p2.horizons):
             myConv /= 2
             counter = 0
 
+        # Alternating between individuals.
+        i = (i+1) % p2.count
 
     print('\nReturning after', trials, 'trials.')
 
