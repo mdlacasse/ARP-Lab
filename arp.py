@@ -288,21 +288,21 @@ class Plan:
             horizon = [self.maxHorizon - 2]
             if method == 'linear':
                 self._linInterp(accType, 1, horizon)
-            elif method == 'tanh':
+            elif method == 's-curve':
                 self._tanhInterp(accType, 1, horizon,
                                  center, width)
         elif self.coordinatedAR == 'individual':
             accType = 'coordinated'
             if method == 'linear':
                 self._linInterp(accType, self.count, self.horizons)
-            elif method == 'tanh':
+            elif method == 's-curve':
                 self._tanhInterp(accType, self.count, self.horizons,
                                  center, width)
         elif self.coordinatedAR == 'none':
             for accType in ['taxable', 'tax-deferred', 'tax-free']:
                 if method == 'linear':
                     self._linInterp(accType, self.count, self.horizons)
-                elif method == 'tanh':
+                elif method == 's-curve':
                     self._tanhInterp(accType, self.count, self.horizons,
                                      center, width)
         else:
