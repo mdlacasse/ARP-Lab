@@ -87,6 +87,7 @@ class Plan:
 
         self.beneficiary = np.ones((2))
 
+        # In case Excel file is not read yet.
         if self.count == 1:
             self.names = ['Person 1']
         else:
@@ -322,9 +323,11 @@ class Plan:
             for j in range(4):
                 dat = np.linspace(self.boundsAR[accType][0][who][j],
                                   self.boundsAR[accType][1][who][j],
-                                  upperN[who]+2)
-                for n in range(upperN[who]+2):
+                                  upperN[who]+1)
+                for n in range(upperN[who]+1):
                     self.y2assetRatios[accType][n][who][j] = dat[n]
+                for n in range(upperN[who]+1, self.maxHorizon):
+                    self.y2assetRatios[accType][n][who][j] = 0
 
         return
 
@@ -336,12 +339,14 @@ class Plan:
         '''
         for who in range(count):
             for j in range(4):
-                t = np.linspace(0, upperN[who], upperN[who]+2)
+                t = np.linspace(0, upperN[who], upperN[who]+1)
                 a = self.boundsAR[accType][0][who][j]
                 b = self.boundsAR[accType][1][who][j]
                 dat = a + 0.5 * (b-a) * (1 + np.tanh((t-c)/w))
-                for n in range(upperN[who]+2):
+                for n in range(upperN[who]+1):
                     self.y2assetRatios[accType][n][who][j] = dat[n]
+                for n in range(upperN[who]+1, self.maxHorizon):
+                    self.y2assetRatios[accType][n][who][j] = 0
 
         return
 
@@ -731,8 +736,8 @@ class Plan:
         # Use 1 as default for deposit and withdrawal ratios.
         wdrlRatio = 1
         depRatio = 1
-        # Omit last item as we are computing values[n+1].
-        for n in range(0, self.maxHorizon - 1):
+        # y2accounts have one more value for allowing values[n+1].
+        for n in range(0, self.maxHorizon-1):
             u.vprint('-------', self.yyear[n],
                      ' -----------------------------------------------')
 
@@ -1011,9 +1016,9 @@ class Plan:
 
         return self.yyear, self.y2accounts, self.y2source, self.yincome
 
-    def showAssetsAllocations(self, tag=''):
+    def showAssetDistribution(self, tag=''):
         '''
-        Plot the allocation of each savings account in thousands of dollars
+        Plot the distribution of each savings account in thousands of dollars
         during the simulation time. This function will generate three
         graphs, one for taxable accounts, one the tax-deferred accounts,
         and one for tax-free accounts.
@@ -1033,11 +1038,11 @@ class Plan:
                         self.y2assetRatios[acType].transpose(1, 2, 0)[i][assetDic[key]][:]
                 y2stack[name] = y2stack[name].transpose()
 
-            title = 'Assets Allocations - '+acType
+            title = 'Assets Distribution - '+acType
             if tag != '':
                 title += ' - '+tag
 
-            self._stackPlot(title, self.count, y2stack,
+            self._stackPlot(title, range(self.count), y2stack,
                             stackNames, 'upper left')
 
         return
@@ -1057,24 +1062,29 @@ class Plan:
         else:
             acList = ['taxable', 'tax-deferred', 'tax-free']
 
-        y2stack = {}
         assetDic = {'stocks': 0, 'C bonds': 1, 'T bonds': 2, 'common': 3}
-        for acType in acList:
-            stackNames = []
-            for key in assetDic:
-                aname = key+' / '+acType
-                stackNames.append(aname)
-                y2stack[aname] = np.zeros((count, self.maxHorizon))
-                for i in range(count):
+        for i in range(count):
+            y2stack = {}
+            for acType in acList:
+                stackNames = []
+                for key in assetDic:
+                    aname = key+' / '+acType
+                    stackNames.append(aname)
+                    y2stack[aname] = np.zeros((count, self.maxHorizon))
                     y2stack[aname][i][:] = \
                         self.y2assetRatios[acType].transpose(1, 2, 0)[i][assetDic[key]][:]
-                y2stack[aname] = y2stack[aname].transpose()
+                    y2stack[aname] = y2stack[aname].transpose()
 
-            title = 'Assets Allocations % - '+acType
-            if tag != '':
-                title += ' - '+tag
+                    title = 'Assets Allocations (%) - '+acType
+                    if self.coordinatedAR == 'both':
+                        title += ' both'
+                    else:
+                        title += ' '+self.names[i]
 
-            self._stackPlot(title, count,
+                if tag != '':
+                    title += ' - '+tag
+
+                self._stackPlot(title, [i],
                             y2stack, stackNames, 'upper left', 'percent')
 
         return
@@ -1088,8 +1098,8 @@ class Plan:
             title += ' - '+tag
         types = ['taxable', 'tax-deferred', 'tax-free']
 
-        self._stackPlot(title, self.count, self.y2accounts,
-                        types, 'upper left')
+        self._stackPlot(title, range(self.count),
+                        self.y2accounts, types, 'upper left')
 
         return
 
@@ -1104,11 +1114,12 @@ class Plan:
         types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
 
-        self._stackPlot(title, self.count, self.y2source, types, 'upper left')
+        self._stackPlot(title, range(self.count), self.y2source,
+                        types, 'upper left')
 
         return
 
-    def _stackPlot(self, title, count, accounts, types,
+    def _stackPlot(self, title, irange, accounts, types,
                    location, dtype='dollars'):
         '''
         Core function for stacked plots.
@@ -1118,7 +1129,7 @@ class Plan:
 
         accountValues = {}
         for aType in types:
-            for i in range(count):
+            for i in irange:
                 tmp = accounts[aType].transpose()[i]
                 if sum(tmp) > 0.01:
                     accountValues[aType+' '+self.names[i]] = tmp
@@ -1144,7 +1155,7 @@ class Plan:
         elif dtype == 'percent':
             ax.set_ylabel('%')
             ax.get_yaxis().set_major_formatter(
-                    tk.FuncFormatter(lambda x, p: format(int(100*x/count), ',')))
+                    tk.FuncFormatter(lambda x, p: format(int(100*x), ',')))
         else:
             u.xprint('Unknown dtype:', dtype)
 
@@ -2392,6 +2403,16 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     '''
     Determines optimal Roth conversions.
     Goal is to maximize estate given a tax-deferred tax rate.
+    A tax rate for the tax-deferred account must be provided.
+    Then, startConv is the largest conversion amount which is
+    considered at the beginning. When no more wealth-positive
+    conversion can be made, the the amount is reduced by half
+    and conversions are adjusted by the new half-amount until no
+    more wealth-positive conversions can be made.
+
+    Due to this division, it is better to choose a number for
+    startConv that is related to a power of 2. Choosing 64,000
+    or 128,000 for example.
     '''
     p2 = clone(p)
     txrate /= 100
