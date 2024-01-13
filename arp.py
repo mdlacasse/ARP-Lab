@@ -2016,10 +2016,16 @@ def _balance(c, X, Y, Z):
     '''
     Core function to coordinate assets allocation ratios amongst
     different accounts.
+    X is taxable, Y is tax-deferred, and Z tax-free are balances.
+    x, y, and z are corresponding allocation ratios.
+
+    For c[], this is the overall desired allocation:
+    0 is stock, 1 C bonds, 2 T bonds, and 3 common assets are ratios.
     '''
     x = np.zeros((4))
     y = np.zeros((4))
     z = np.zeros((4))
+    # Total balance.
     T = X + Y + Z
 
     if T < 0.01:
@@ -2048,7 +2054,7 @@ def _balance(c, X, Y, Z):
     z[3] = (c[3]*T - x[3]*X - y[3]*Y)/(Z + 0.01)
     z[3] = min(z[3], 1. - z[0] - z[1])
 
-    # Treasury bills get the rest.
+    # Treasury bonds get the rest.
     if X > 0.01:
         x[2] = 1. - sum(x)
     if Y > 0.01:
