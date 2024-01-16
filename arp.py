@@ -1091,7 +1091,8 @@ class Plan:
                     title += ' - '+tag
 
                 self._stackPlot(title, [i],
-                            y2stack, stackNames, 'upper left', 'percent')
+                                y2stack, stackNames,
+                                'upper left', 'percent')
 
         return
 
@@ -2177,7 +2178,7 @@ def _checkPenalty(account, amount, names, ages, i):
     '''
     if ages[i] < 60:
         u.vprint('WARNING: Withdrawal of', d(amount), 'from',
-                 name[i], account,
+                 names[i], account,
                  'account will trigger a 10% penalty!')
 
     return
@@ -2300,17 +2301,17 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                 bestX[n][i] = p2.timeLists[i]['Roth X'][n]
                 counter = 0
             else:
-                p2.timeLists[i]['Roth X'][n] -= int(rothX)
+                p2.timeLists[i]['Roth X'][n] -= rothX
                 counter += 1
 
             trials += 1
             if trials % 100 == 0:
-                print('.', end='')
+                print('.', end='', flush=True)
                 if trials % 1000 == 0:
                     print()
 
         # If nothing happened during last rounds:
-        # we divide amount. Factor 2 for random reversal.
+        # we divide amount. Min factor 2 for random reversal.
         if counter > 2*sum(p2.horizons):
             myConv /= 2
             counter = 0
