@@ -844,7 +844,9 @@ class Plan:
                              'requested big-ticket item of', d(bti))
                     amounts, total = _smartBanking(bti, ya2taxable,
                                                    ya2taxDef, ya2taxFree,
-                                                   n+1, (i+1) % 2, self.names)
+                                                   n+1, (i+1) % 2,
+                                                   self.names, self.y2ages,
+                                                   True)
                     if total != abs(bti):
                         u.vprint('WARNING: Insufficient funds for BTI for',
                                  self.names[i], 'in', self.yyear[n])
@@ -854,6 +856,8 @@ class Plan:
 
                     # A BTI is not an income unless we created a taxable event
                     # that we track separately (as we do for Roth conversions).
+                    # Total is stored in first value of amounts, followed
+                    # by values per individual.
                     btiEvent += amounts['tax-def'][0]
                     ys2dist[n][:] += amounts['tax-def'][1:]
                     ys2txfree[n][:] += amounts['tax-free'][1:]
@@ -890,7 +894,7 @@ class Plan:
                          'in taxable accounts with ratio',
                          '{:.2f}'.format(depRatio))
                 _smartBanking(gap, ya2taxable, ya2taxDef, ya2taxFree, n+1,
-                              depRatio, self.names, True)
+                              depRatio, self.names, self.y2ages, True)
                 yincomeTax[n] = estimatedTax
                 ygrossIncome[n] = gross
                 # Medicare IRMAA looks back 2 years.
@@ -922,7 +926,8 @@ class Plan:
                     amounts, total = _smartBanking(withdrawal, ya2taxable,
                                                    ya2taxDef, ya2taxFree,
                                                    n+1, wdrlRatio,
-                                                   self.names, False)
+                                                   self.names, self.y2ages,
+                                                   False)
 
                     # Zeroth component of amounts countains total.
                     txfree = amounts['taxable'][0] + amounts['tax-free'][0]
@@ -957,7 +962,8 @@ class Plan:
                 amounts, total = _smartBanking(withdrawal, ya2taxable,
                                                ya2taxDef, ya2taxFree,
                                                n+1, wdrlRatio,
-                                               self.names, True)
+                                               self.names, self.y2ages,
+                                               True)
 
                 u.vprint('Performed withdrawal of', d(total),
                          'using split of', '{:.2f}'.format(wdrlRatio))
@@ -1606,7 +1612,7 @@ class Plan:
                    'sources': self.showSources, 'taxes': self.showTaxes,
                    'gross income': self.showGrossIncome,
                    'accounts': self.showAccounts,
-                   'allocations': self.showAssetsAllocations
+                   'distribution': self.showAssetDistribution
                    }
 
         for pl in myplots:
@@ -2066,7 +2072,7 @@ def _balance(c, X, Y, Z):
 
 
 def _smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
-                  names, commit=True):
+                  names, ages, commit=True):
     '''
     Deposit/withdraw amount from given accounts. Return dictionary
     of lists itemizing amount taken from taxable, tax-deferred,
@@ -2086,7 +2092,7 @@ def _smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
     for i in range(len(names)):
         subAmount = (wdrlRatio - 2*i*wdrlRatio + i)*amount
         itemized = _smartBankingSub(subAmount, taxable, taxdef, taxfree,
-                                    year, i, names, commit)
+                                    year, i, names, ages[year], commit)
 
         amounts['taxable'].append(itemized[0])
         amounts['tax-def'].append(itemized[1])
@@ -2101,7 +2107,7 @@ def _smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
 
 
 def _smartBankingSub(amount, taxable, taxdef, taxfree,
-                     year, i, names, commit=True):
+                     year, i, names, ages, commit=True):
     '''
     Deposit/withdraw amount from given accounts.
     Return amounts withdrawn from relative accounts:
@@ -2132,22 +2138,26 @@ def _smartBankingSub(amount, taxable, taxdef, taxfree,
     # Then go through other accounts. First tax-deferred.
     if remain <= taxdef[year][i]:
         if commit:
+            _checkPenalty('tax-deferred', remain, names, ages, i)
             taxdef[year][i] -= remain
         return [portion1, remain, 0, withdrawal]
 
     portion2 = taxdef[year][i]
     if commit:
+        _checkPenalty('tax-deferred', portion2, names, ages, i)
         taxdef[year][i] = 0
     remain -= portion2
 
     # Then tax-free account. Only portion2 is taxable.
     if remain <= taxfree[year][i]:
         if commit:
+            _checkPenalty('tax-free', remain, names, ages, i)
             taxfree[year][i] -= remain
         return [portion1, portion2, remain, withdrawal]
 
     portion3 = taxfree[year][i]
     if commit:
+        _checkPenalty('tax-free', portion3, names, ages, i)
         taxfree[year][i] = 0
     remain -= portion3
 
@@ -2158,6 +2168,19 @@ def _smartBankingSub(amount, taxable, taxdef, taxfree,
                  'as all accounts were exhausted!')
 
     return [portion1, portion2, portion3, withdrawal-remain]
+
+
+def _checkPenalty(account, amount, names, ages, i):
+    '''
+    Withdrawal from savings accounts before the age of 59 1/2
+    will trigger a 10% penalty. Check for the age.
+    '''
+    if ages[i] < 60:
+        u.vprint('WARNING: Withdrawal of', d(amount), 'from',
+                 name[i], account,
+                 'account will trigger a 10% penalty!')
+
+    return
 
 
 def showHistogram(data, tag=''):
