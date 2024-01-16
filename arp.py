@@ -1659,7 +1659,7 @@ class Plan:
         for i in range(N):
             print('--------------------------------------------')
             print('Running case #', i)
-            self._runOnce('stochastic', 1940, 2022, myplots=myplots)
+            self._runOnce('stochastic', 1940, 2023, myplots=myplots)
             print('Plan success:', self.success)
             if self.success:
                 success += 1
