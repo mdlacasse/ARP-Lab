@@ -1627,8 +1627,8 @@ class Plan:
         '''
         to = frm + self.maxHorizon - 1
         N = rates.TO - self.maxHorizon - frm + 2
+        estateResults = np.zeros(N)
         successCount = 0
-        total = 0
         for i in range(N):
             print('--------------------------------------------')
             print('Running case #', i, '(', frm+i, ')')
@@ -1642,7 +1642,7 @@ class Plan:
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
                   ', tax rate:', pc(self.deferredTxRate))
-            total += estate
+            estateResults[i] = estate
             if len(myplots) > 0:
                 # Number of seconds to wait.
                 # For embedding in jupyter set to a low value.
@@ -1653,7 +1653,10 @@ class Plan:
         print('============================================')
         print('Success rate:', successCount, 'out of', N,
               '('+pc(successCount/N)+')')
-        print('Average estate value (today\'s $): ', d(total/N))
+        print('Median estate value (today\'s $): ',
+              d(np.median(estateResults)))
+
+        showHistogram(estateResults, binDiv=4)
 
         return
 
@@ -1662,14 +1665,14 @@ class Plan:
         Run N simulations using a stochastic sinulation.
         '''
         estateResults = np.zeros(N)
-        success = 0
+        successCount = 0
         for i in range(N):
             print('--------------------------------------------')
             print('Running case #', i)
             self._runOnce('stochastic', 1940, 2023, myplots=myplots)
             print('Plan success:', self.success)
             if self.success:
-                success += 1
+                successCount += 1
 
             # Rely on self.deferredTxRate for rate.
             estate, factor = self._estate(self.deferredTxRate)
@@ -1679,12 +1682,12 @@ class Plan:
             estateResults[i] = estate
 
         print('============================================')
-        print('Success rate:', success, 'out of', N,
-              '('+pc(success/N)+')')
+        print('Success rate:', successCount, 'out of', N,
+              '('+pc(successCount/N)+')')
         print('Median estate value (today\'s $): ',
               d(np.median(estateResults)))
 
-        showHistogram(estateResults)
+        showHistogram(estateResults, binDiv=5)
 
         return
 
@@ -2184,14 +2187,14 @@ def _checkPenalty(account, amount, names, ages, i):
     return
 
 
-def showHistogram(data, tag=''):
+def showHistogram(data, tag='', binDiv=10):
     '''
     Plot estate results of a Monte Carlo simulation.
     '''
     import matplotlib.pyplot as plt
     import matplotlib.ticker as tk
 
-    nbins = int(len(data)/10)
+    nbins = int(len(data)/binDiv)
     fig, ax = plt.subplots(tight_layout=True)
 
     title = 'Estate Value Distribution'
