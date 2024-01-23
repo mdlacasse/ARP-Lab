@@ -2310,6 +2310,11 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                 if trials % 1000 == 0:
                     print()
 
+        # Reset to maximum possible conversion.
+        for n in range(p2.horizons[i]):
+            p2.timeLists[i]['Roth X'][n] = min(p2.timeLists[i]['Roth X'][n],
+                                               p2.y2accounts['tax-deferred'][n][i])
+
         # If nothing happened during last rounds:
         # we divide amount. Min factor 2 for random reversal.
         if counter > 2*sum(p2.horizons):
