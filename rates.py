@@ -234,6 +234,10 @@ class rates:
         # Default rates are average over last 30 years.
         self._defRates = np.array([0.1101, 0.0736, 0.0503, 0.0251])
 
+        # Conservative rates are average predictions of major firms
+        # as reported by MorningStar.
+        self._conservRates = np.array([0.05, 0.05, 0.04, 0.025])
+
         self.frm = 0
         self.to = len(SP500)
 
@@ -254,6 +258,11 @@ class rates:
             u.vprint('Using default fixed rates values: (%)\n',
                      100.*self._defRates)
             self._setFixedRates(self._defRates)
+            return
+        elif method == 'conservative':
+            u.vprint('Using conservative fixed rates values: (%)\n',
+                     100.*self._conservRates)
+            self._setFixedRates(self._conservRates)
             return
         elif method == 'fixed':
             self.method == 'fixed'

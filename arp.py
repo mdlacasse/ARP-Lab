@@ -2282,30 +2282,29 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
 
     i = 0
     while myConv >= minConv:
-        for n in np.random.permutation(p2.horizons[i]):
-            rothX = myConv
-            xnow = p2.timeLists[i]['Roth X'][n]
+        nMax = -1
+        rothXmax = 0
+        loopMax = maxValue
+        for n in range(p2.horizons[i]):
+            rothX = tx.inflationAdjusted(myConv, n, p2.rates)
 
-            # If xnow > 0, we can reverse conversion.
-            if xnow > 0 and random.random() < 0.5:
-                rothX *= -1
-
-            if rothX < 0:
-                rothX = int(max(rothX, -xnow))
-            else:
-                rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
+            if rothX > p2.y2accounts['tax-deferred'][n][i]:
+                break
 
             p2.timeLists[i]['Roth X'][n] += rothX
+
             p2.run()
 
             newValue, mul2 = p2._estate(txrate)
-            if newValue > maxValue:
-                maxValue = newValue
-                bestX[n][i] = p2.timeLists[i]['Roth X'][n]
+            if newValue > loopMax:
+                loopMax = newValue
+                nMax = n
+                rothXmax = rothX
                 counter = 0
             else:
-                p2.timeLists[i]['Roth X'][n] -= rothX
                 counter += 1
+
+            p2.timeLists[i]['Roth X'][n] -= rothX
 
             trials += 1
             if trials % 100 == 0:
@@ -2313,19 +2312,18 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                 if trials % 1000 == 0:
                     print()
 
-        # Reset to maximum possible conversion.
-        for n in range(p2.horizons[i]):
-            p2.timeLists[i]['Roth X'][n] = min(p2.timeLists[i]['Roth X'][n],
-                                               p2.y2accounts['tax-deferred'][n][i])
-
-        # If nothing happened during last rounds:
-        # we divide amount. Min factor 2 for random reversal.
-        if counter > 2*sum(p2.horizons):
-            myConv /= 2
-            counter = 0
+        if nMax >= 0:
+            maxValue = loopMax
+            p2.timeLists[i]['Roth X'][nMax] += rothXmax
+            bestX[nMax][i] += rothXmax
 
         # Alternating between individuals.
         i = (i+1) % p2.count
+
+        # If nothing happened during last rounds: we divide amount.
+        if counter > sum(p2.horizons):
+            myConv /= 2
+            counter = 0
 
     print('\nReturning after', trials, 'trials.')
 
