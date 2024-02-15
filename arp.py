@@ -2301,7 +2301,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
         nMax = -1
         rothXmax = 0
         loopMax = maxValue
-        for n in range(p2.horizons[i]):
+        for n in range(p2.horizons[i]+1):
             rothX = tx.inflationAdjusted(myConv*ratio[i], n, p2.rates)
 
             if rothX > p2.y2accounts['tax-deferred'][n][i]:
@@ -2339,7 +2339,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
             while success:
                 success = False
                 for j in range(p2.count):
-                    for n in range(p2.horizons[j]):
+                    for n in range(p2.horizons[j]+1):
                         rothX = tx.inflationAdjusted(myConv*ratio[j], n, p2.rates)
 
                         if rothX < p2.timeLists[j]['Roth X'][n]:
