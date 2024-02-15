@@ -2280,7 +2280,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     '''
     import random
     random.seed()
-    # Make conversion proportional to first-year balances for spouses.
+    # Make conversions proportional to first-year balances for spouses.
     ratio = [1, 0]
 
     if p2.count == 2:
@@ -2310,16 +2310,16 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
             p2.timeLists[i]['Roth X'][n] += rothX
             p2.run()
             newValue, mul2 = p2._estate(txrate)
-
-            trials += 1
-            _printDot(trials)
+            p2.timeLists[i]['Roth X'][n] -= rothX
 
             if newValue > loopMax:
                 loopMax = newValue
                 nMax = n
                 rothXmax = rothX
 
-            p2.timeLists[i]['Roth X'][n] -= rothX
+            trials += 1
+            _printDot(trials)
+
 
         if nMax >= 0:
             maxValue = loopMax
@@ -2328,7 +2328,8 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
         else:
             blank += 1
 
-        # If nothing happened during the last round: reduce conversion amount.
+        # If nothing happened during last rounds: reduce conversion amount
+        # and look for overshoots.
         if blank == p2.count:
             myConv /= 2
             blank = 0
@@ -2347,18 +2348,17 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                             p2.run()
                             newValue, mul2 = p2._estate(txrate)
 
-                            trials += 1
-                            _printDot(trials)
-
                             if newValue > maxValue:
                                 maxValue = newValue
                                 success = True
                             else:
                                 p2.timeLists[j]['Roth X'][n] += rothX
 
+                            trials += 1
+                            _printDot(trials)
+
         # Alternating between individuals if needed.
         i = (i+1) % p2.count
-
 
     print('\nReturning after', trials, 'trials.')
 
