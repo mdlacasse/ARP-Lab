@@ -2261,69 +2261,104 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     return fig, ax
 
 
+def _printDot(trials):
+    '''
+    Print a dot for every 100 trials.
+    '''
+    if trials % 100 == 0:
+        print('.', end='', flush=True)
+        if trials % 1000 == 0:
+            print()
+
+
 def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     '''
-    Determine best Roth conversions through Monte Carlo approach,
+    Determine best Roth conversions through mixed sweeping approach,
     starting from large conversions being reduced by half over the
     simulation. Starting conversion amount is startConv.
     Minimum conversion considered is minConv.
     '''
     import random
     random.seed()
+    # Make conversion proportional to first-year balances for spouses.
+    ratio = [1, 0]
 
-    print('Starting Roth optimizer. This calculation takes a few minutes.')
+    if p2.count == 2:
+        ratio[0] = (p2.y2accounts['tax-deferred'][0][0] \
+                    /sum(p2.y2accounts['tax-deferred'][0][:]))
+        ratio[1] = 1 - ratio[0]
+
+    print('Starting Roth optimizer. This calculation takes about a minute.')
     print('Each dot represents 100 different scenarios tested:')
 
     myConv = startConv
     maxValue = baseValue
     bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
-    counter = 0
     trials = 0
-
     i = 0
+    blank = 0
     while myConv >= minConv:
         nMax = -1
         rothXmax = 0
         loopMax = maxValue
         for n in range(p2.horizons[i]):
-            rothX = tx.inflationAdjusted(myConv, n, p2.rates)
+            rothX = tx.inflationAdjusted(myConv*ratio[i], n, p2.rates)
 
             if rothX > p2.y2accounts['tax-deferred'][n][i]:
                 break
 
             p2.timeLists[i]['Roth X'][n] += rothX
-
             p2.run()
-
             newValue, mul2 = p2._estate(txrate)
+
+            trials += 1
+            _printDot(trials)
+
             if newValue > loopMax:
                 loopMax = newValue
                 nMax = n
                 rothXmax = rothX
-                counter = 0
-            else:
-                counter += 1
 
             p2.timeLists[i]['Roth X'][n] -= rothX
-
-            trials += 1
-            if trials % 100 == 0:
-                print('.', end='', flush=True)
-                if trials % 1000 == 0:
-                    print()
 
         if nMax >= 0:
             maxValue = loopMax
             p2.timeLists[i]['Roth X'][nMax] += rothXmax
             bestX[nMax][i] += rothXmax
+        else:
+            blank += 1
 
-        # Alternating between individuals.
+        # If nothing happened during the last round: reduce conversion amount.
+        if blank == p2.count:
+            myConv /= 2
+            blank = 0
+
+            # Remove overshoots.
+            success = True
+            while success:
+                success = False
+                for j in range(p2.count):
+                    for n in range(p2.horizons[j]):
+                        rothX = tx.inflationAdjusted(myConv*ratio[j], n, p2.rates)
+
+                        if rothX < p2.timeLists[j]['Roth X'][n]:
+                            p2.timeLists[j]['Roth X'][n] -= rothX
+
+                            p2.run()
+                            newValue, mul2 = p2._estate(txrate)
+
+                            trials += 1
+                            _printDot(trials)
+
+                            if newValue > maxValue:
+                                maxValue = newValue
+                                success = True
+                            else:
+                                p2.timeLists[j]['Roth X'][n] += rothX
+
+        # Alternating between individuals if needed.
         i = (i+1) % p2.count
 
-        # If nothing happened during last rounds: we divide amount.
-        if counter > sum(p2.horizons):
-            myConv /= 2
-            counter = 0
 
     print('\nReturning after', trials, 'trials.')
 
@@ -2384,53 +2419,9 @@ def _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv):
             else:
                 p2.timeLists[i]['Roth X'][n] -= rothX
 
-            '''
-            # Swap two entries.
-            i = int(random.random()*p2.count)
-            n1 = int(random.random()*p2.horizons[i])
-            xnow1 = p2.timeLists[i]['Roth X'][n1]
-            n2 = int(random.random()*p2.horizons[i])
-            xnow2 = p2.timeLists[i]['Roth X'][n2]
-            delta = xnow2 - xnow1
-            xRoth1 = int(min(delta, p2.y2accounts['tax-deferred'][n1][i]))
-            xRoth2 = int(min(-delta, xnow2))
-            p2.timeLists[i]['Roth X'][n1] += xRoth1
-            p2.timeLists[i]['Roth X'][n2] += xRoth2
-            '''
-
         print('T:', T, 'Success rate:', pc(flipCount/numAttempts))
 
     print('\nReturning after', trials, 'trials.')
-
-    return bestX
-
-
-def _sweepRoth(p2, baseValue, txrate, minConv):
-    '''
-    Determine best Roth conversions through trial and error sweep.
-    Fast but not really good as results are not close to optimal.
-    '''
-    maxValue = baseValue
-    bestX = np.zeros((p2.maxHorizon, p2.count), dtype=int)
-    for i in range(p2.count):
-        for n in range(p2.horizons[i]):
-            print('Analyzing year', n, 'for', p2.names[i])
-            xmax = int(p2.y2accounts['tax-deferred'][n][i])
-            if xmax < minConv:
-                continue
-
-            for rothX in range(minConv, xmax, minConv):
-                p2.timeLists[i]['Roth X'][n] = rothX
-                p2.run()
-                newValue, mul2 = p2._estate(txrate)
-
-                if newValue > maxValue:
-                    maxValue = newValue
-                    bestX[n][i] = rothX
-                else:
-                    break
-            # Reset to zero or use new value.
-            p2.timeLists[i]['Roth X'][n] = bestX[n][i]
 
     return bestX
 
@@ -2463,7 +2454,6 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     p2.run()
     baseValue, mul = p2._estate(txrate)
 
-    # bestX = _sweepRoth(p2, baseValue, txrate, minConv, startConv)
     # bestX = _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv)
     bestX = _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv)
     p2.run()
