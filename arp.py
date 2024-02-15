@@ -1295,7 +1295,7 @@ class Plan:
         # return fig, ax
         return
 
-    def saveInstance(self, basename, overwrite):
+    def saveInstance(self, basename, overwrite=False):
         import pandas as pd
         from openpyxl import Workbook
         from openpyxl.utils.dataframe import dataframe_to_rows
@@ -2448,7 +2448,7 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
 
     # Start by zeroing all RothX in cloned plan.
     for i in range(p2.count):
-        for n in range(p2.horizons[i]):
+        for n in range(p2.horizons[i]+1):
             p2.timeLists[i]['Roth X'][n] = 0
 
     p2.run()
