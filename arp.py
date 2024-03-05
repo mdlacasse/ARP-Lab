@@ -272,8 +272,8 @@ class Plan:
         Interpolate assets allocation ratios from initial value (today) to
         final value (at the end of horizon).
 
-        Two interpolation methods are supported: linear and s-curve. Linear is a
-        straight line between now and the end of the simulation.
+        Two interpolation methods are supported: linear and s-curve.
+        Linear is a straight line between now and the end of the simulation.
         Hyperbolic tangent give a smooth "S" curve centered at point "c"
         with a width "w". Center point defaults to 15 years and width to
         5 years. This means that the transition from initial to final
@@ -1520,8 +1520,9 @@ class Plan:
 
         val, percent = self._estate(taxRate)
 
-        print(self.yyear[-2], 'Estate: (today\'s $)', d(val),
-              ', cum. infl.:', pc(percent), ', tax rate:', pc(taxRate))
+        print(self.yyear[-2],
+              'Estate: (today\'s $) %s (nominal %s),' % (d(val), d(val*(1+percent))),
+              'cum. infl.: %s, tax rate: %s' % (pc(percent), pc(taxRate)))
 
         return
 
@@ -2284,8 +2285,8 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     ratio = [1, 0]
 
     if p2.count == 2:
-        ratio[0] = (p2.y2accounts['tax-deferred'][0][0] \
-                    /sum(p2.y2accounts['tax-deferred'][0][:]))
+        ratio[0] = (p2.y2accounts['tax-deferred'][0][0]
+                    / sum(p2.y2accounts['tax-deferred'][0][:]))
         ratio[1] = 1 - ratio[0]
 
     print('Starting Roth optimizer. This calculation takes about a minute.')
@@ -2319,7 +2320,6 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
 
             trials += 1
             _printDot(trials)
-
 
         if nMax >= 0:
             maxValue = loopMax
