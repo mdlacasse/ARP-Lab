@@ -657,21 +657,38 @@ class Plan:
 
     def totals(self):
         '''
-        Returns total amounts rither paid or received in today's $.
+        Returns total amounts either paid or received in today's $.
         '''
         totTaxes = 0
+        totIrmaa = 0
         totNetIncome = 0
-        totRothX = 0
+        totRothX = np.zeros((self.count))
+        totSSA = np.zeros((self.count))
+        totPension = np.zeros((self.count))
+        totWages = np.zeros((self.count))
         for n in range(self.Years):
             fac = 1./tx.inflationAdjusted(1., n, self.rates)
-            totTaxes += fac*self.yincome['taxes']
-            totNetIncome += fac*self.yincome['net']
-            totRothX += fac*self.yincome['RothX']
+            totTaxes += fac*self.yincome['taxes'][n]
+            totIrmaa += fac*self.yincome['irmaa'][n]
+            totNetIncome += fac*self.yincome['net'][n]
+            for who in range(self.count):
+                totSSA[who] += fac*self.y2source['ssec'][n][who]
+                totPension[who] += fac*self.y2source['pension'][n][who]
+                totWages[who] += fac*self.y2source['wages'][n][who]
+                totRothX[who] += fac*self.y2source['RothX'][n][who]
 
-        print('Totals (in today\'s $):',
-              '\ttaxes:', totTaxes,
-              '\tnet income:', totNetIncome,
-              '\tRoth conversions:', totRothX)
+        print('Totals (in today\'s $):\n',
+              '\tNet income:', d(totNetIncome), '\n',
+              '\tIncome taxes:', d(totTaxes), '\n',
+              '\tIRMAA:', d(totIrmaa),
+              )
+        for who in range(self.count):
+            print(self.names[who])
+            print('\tWages:', d(totWages[who]), '\n',
+                  '\tSocial security:', d(totSSA[who]), '\n',
+                  '\tPension:', d(totPension[who]), '\n',
+                  '\tRoth conversions:', d(totRothX[who]),
+                  )
 
         return
 
@@ -699,7 +716,7 @@ class Plan:
                          'ssec': np.zeros((self.Years, self.count)),
                          'pension': np.zeros((self.Years, self.count)),
                          'div': np.zeros((self.Years, self.count)),
-                         'job': np.zeros((self.Years, self.count)),
+                         'wages': np.zeros((self.Years, self.count)),
                          'taxable': np.zeros((self.Years, self.count)),
                          'dist': np.zeros((self.Years, self.count)),
                          'tax-free': np.zeros((self.Years, self.count)),
@@ -708,7 +725,7 @@ class Plan:
                          }
 
         # Use shorter names:
-        ys2job = self.y2source['job']
+        ys2wages = self.y2source['wages']
         ys2rmd = self.y2source['rmd']
         ys2pension = self.y2source['pension']
         ys2ssec = self.y2source['ssec']
@@ -802,7 +819,7 @@ class Plan:
                 tmp = self.timeLists[i]['anticipated income'][n]
                 if tmp > 0:
                     u.vprint(self.names[i], 'reported income of', d(tmp))
-                    ys2job[n][i] += tmp
+                    ys2wages[n][i] += tmp
                     ytaxableIncome[n] += tmp
 
                 # Add contributions and growth to taxable account.
@@ -910,9 +927,9 @@ class Plan:
             if gap >= 0:
                 if surviving == 2:
                     # Deposit surplus following this year's income ratio.
-                    depRatio = (ys2job[n][0] + ys2ssec[n][0] +
+                    depRatio = (ys2wages[n][0] + ys2ssec[n][0] +
                                 ys2pension[n][0] + ys2rmd[n][0]) / \
-                               (sum(ys2job[n][:] + ys2pension[n][:] +
+                               (sum(ys2wages[n][:] + ys2pension[n][:] +
                                 ys2ssec[n][:] + ys2rmd[n][:]) + 1)
 
                 u.vprint('Depositing', d(gap),
@@ -1145,7 +1162,7 @@ class Plan:
         if tag != '':
             title += ' - '+tag
 
-        types = ['job', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
+        types = ['wages', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
                  'div', 'taxable', 'tax-free']
 
         self._stackPlot(title, range(self.count), self.y2source,
@@ -2335,7 +2352,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
         rothXmax = 0
         loopMax = maxValue
         # No conversion during last year?
-        for n in range(p2.horizons[i]-1):
+        for n in range(p2.horizons[i]):
             rothX = tx.inflationAdjusted(myConv*ratio[i], n, p2.rates)
 
             if rothX > p2.y2accounts['tax-deferred'][n][i]:
@@ -2361,8 +2378,8 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
         else:
             blank += 1
 
-        # If nothing happened during last rounds: reduce conversion amount
-        # and look for overshoots.
+        # If nothing happened during two last rounds:
+        # reduce conversion amount and look for overshoots.
         if blank == p2.count:
             myConv /= 2
             blank = 0
@@ -2372,7 +2389,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
             while success:
                 success = False
                 for j in range(p2.count):
-                    for n in range(p2.horizons[j]-1):
+                    for n in reversed(range(p2.horizons[j])):
                         rothX = tx.inflationAdjusted(
                                     myConv*ratio[j], n, p2.rates)
 
@@ -2382,7 +2399,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                             p2.run()
                             newValue, mul2 = p2._estate(txrate)
 
-                            if newValue > maxValue:
+                            if newValue >= maxValue:
                                 maxValue = newValue
                                 success = True
                             else:
@@ -2494,7 +2511,7 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     newValue, mul = p2._estate(txrate)
     now = datetime.date.today().year
     print('Estate (in %d $) increased from' % now, d(baseValue),
-          'to', d(newValue), '(', d(newValue - baseValue), ')')
+          'to', d(newValue), '( +', d(newValue - baseValue), ')')
 
     u.setVerbose(prevState)
 
