@@ -43,7 +43,7 @@ class Plan:
         This information will determine the size of arrays required
         for the calculations.
         '''
-        # Check inputs.
+        # Check validity of inputs.
         self.count = len(YOB)
         assert (self.count == len(expectancy))
         assert (0 < self.count and self.count <= 2)
@@ -55,32 +55,33 @@ class Plan:
 
         now = datetime.date.today().year
         # Compute both life horizons through a comprehension.
-        # Plus one to model inclusive bounds.
+        # Add one to account for inclusive bounds.
         # We assume that individual lives until the end of the year during
-        # which she/he reached age of life expectancy.
+        # which she/he reached the age of life expectancy.
         self.horizons = [YOB[i] + expectancy[i] - now + 1
                          for i in range(self.count)]
-        # Add one more year as we are computing balances for next year.
-        # Last year will contain estate value at the beginning of the year.
-        self.Years = max(self.horizons) + 1
+        # Add one more year as we are computing balances for next year and
+        # the beginning of last year will contain estate value.
+        self.span = max(self.horizons) + 1
 
-        u.vprint('Preparing scenario of', self.Years - 1, 'years',
+        u.vprint('Preparing scenario of', self.span - 1, 'years',
                  'for', self.count, 'individual'+['', 's'][self.count-1])
 
         # Variables starting with a 'y' are tracking yearly values.
-        # Initialize variables to track year after year:
-        self.yyear = np.array(range(now, now+self.Years))
+        # Initialize variables that track values year after year:
+        self.yyear = np.array(range(now, now+self.span))
 
         if self.count == 1:
-            ages = age(YOB[0])
-            self.y2ages = np.zeros((self.count, self.Years), dtype=int)
-            self.y2ages[0][:] = range(ages, ages+self.Years)
+            age = _age(YOB[0])
+            self.y2ages = np.zeros((self.count, self.span), dtype=int)
+            self.y2ages[0][:] = range(age, age+self.span)
         elif self.count == 2:
-            ages = np.array([age(YOB[0]), age(YOB[1])])
-            self.y2ages = np.array([range(ages[0], ages[0]+self.Years),
-                                   range(ages[1], ages[1]+self.Years)])
+            ages = np.array([_age(YOB[0]), _age(YOB[1])])
+            self.y2ages = np.array([range(ages[0], ages[0]+self.span),
+                                   range(ages[1], ages[1]+self.span)])
 
         self.y2ages = self.y2ages.transpose()
+
         now = datetime.date.today().year
         u.vprint('Current ages in', now, ':', self.y2ages[0])
 
@@ -88,6 +89,7 @@ class Plan:
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
             self.n2balances[aType] = np.zeros((self.count))
 
+        # By defaults, spouses are full mutual beneficiaries.
         self.beneficiary = np.ones((2))
 
         # In case Excel file is not read yet.
@@ -99,10 +101,10 @@ class Plan:
         self.timeLists = None
         self.timeListsFileName = None
 
-        # Default value for split between spouse is auto.
+        # Default value for distribution split between spouse is auto.
         self.split = 'auto'
 
-        # Target net income during retirement.
+        # Net income target during retirement.
         self.target = None
         self.profile = 'flat'
 
@@ -112,22 +114,23 @@ class Plan:
         self.ssecAmount = None
         self.ssecAge = None
 
-        # Tax rate on taxable portion of estate.
-        self.deferredTxRate = 0
-        self.setDeferredTaxRate(25)
+        # Heir tax rate on taxable portion of estate.
+        self.heirsTxRate = 0
+        self.setHeirsTaxRate(25)
 
         self.survivorFraction = 0
         self.setSurvivorFraction(0.6)
 
+        # Variables needed for handling assets ratios.
         self.coordinatedAR = 'none'
         self.y2assetRatios = {}
         self.boundsAR = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free', 'coordinated']:
             self.y2assetRatios[aType] = \
-                    np.zeros((self.Years, self.count, 4))
+                    np.zeros((self.span, self.count, 4))
             self.boundsAR[aType] = np.zeros((2, self.count, 4))
 
-        # Set default values on bounds.
+        # Set default values on bounds. k is initial(0) and final(1).
         u.vprint('Using default values for assets allocation ratios.')
         for k in [0, 1]:
             if self.count == 1:
@@ -161,8 +164,7 @@ class Plan:
 
         # Track if run was successful. Successful until it fails.
         self.success = True
-        # For windows offets.
-        self.window = geometry()
+
         return
 
     def setSurvivorFraction(self, fraction):
@@ -175,14 +177,15 @@ class Plan:
 
         return
 
-    def setDeferredTaxRate(self, rate):
+    def setHeirsTaxRate(self, rate):
         '''
-        Set the tax rate on the tax-deferred portion of the estate.
+        Set the heirs tax rate on the tax-deferred portion of the estate.
         '''
         assert (0 <= rate and rate <= 100)
         rate /= 100
-        u.vprint('Rate on tax-deferred estate set to', pc(rate, f=0))
-        self.deferredTxRate = rate
+        u.vprint('Heirs tax rate on tax-deferred portion of estate set to',
+                 pc(rate, f=0))
+        self.heirsTxRate = rate
 
         return
 
@@ -330,7 +333,7 @@ class Plan:
                                   numPoints[who]+1)
                 for n in range(numPoints[who]+1):
                     self.y2assetRatios[accType][n][who][j] = dat[n]
-                for n in range(numPoints[who]+1, self.Years):
+                for n in range(numPoints[who]+1, self.span):
                     self.y2assetRatios[accType][n][who][j] = 0
 
         return
@@ -349,7 +352,7 @@ class Plan:
                 dat = a + 0.5 * (b-a) * (1 + np.tanh((t-c)/w))
                 for n in range(numPoints[who]+1):
                     self.y2assetRatios[accType][n][who][j] = dat[n]
-                for n in range(numPoints[who]+1, self.Years):
+                for n in range(numPoints[who]+1, self.span):
                     self.y2assetRatios[accType][n][who][j] = 0
 
         return
@@ -417,7 +420,7 @@ class Plan:
         self.rateValues = values
         # Remember that all coded calculations are forward looking.
         # No reference to years before today can be done.
-        self.rates = dr.genSeries(frm, to, self.Years)
+        self.rates = dr.genSeries(frm, to, self.span)
         # u.vprint('Generated rate series of', len(self.rates))
 
         return
@@ -666,7 +669,7 @@ class Plan:
         totSSA = np.zeros((self.count))
         totPension = np.zeros((self.count))
         totWages = np.zeros((self.count))
-        for n in range(self.Years):
+        for n in range(self.span):
             fac = 1./tx.inflationAdjusted(1., n, self.rates)
             totTaxes += fac*self.yincome['taxes'][n]
             totIrmaa += fac*self.yincome['irmaa'][n]
@@ -677,7 +680,7 @@ class Plan:
                 totWages[who] += fac*self.y2source['wages'][n][who]
                 totRothX[who] += fac*self.y2source['RothX'][n][who]
 
-        print('Totals (in today\'s $):\n',
+        print('\nTotals (in today\'s $):\n',
               '\tNet income:', d(totNetIncome), '\n',
               '\tIncome taxes:', d(totTaxes), '\n',
               '\tIRMAA:', d(totIrmaa),
@@ -701,7 +704,7 @@ class Plan:
         # We'll transpose later if needed when plotting.
         self.y2accounts = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
-            self.y2accounts[aType] = np.zeros((self.Years, self.count))
+            self.y2accounts[aType] = np.zeros((self.span, self.count))
 
         self._initializeAccounts()
 
@@ -712,16 +715,16 @@ class Plan:
         filingStatus = self.status
 
         # All sources of income.
-        self.y2source = {'rmd': np.zeros((self.Years, self.count)),
-                         'ssec': np.zeros((self.Years, self.count)),
-                         'pension': np.zeros((self.Years, self.count)),
-                         'div': np.zeros((self.Years, self.count)),
-                         'wages': np.zeros((self.Years, self.count)),
-                         'taxable': np.zeros((self.Years, self.count)),
-                         'dist': np.zeros((self.Years, self.count)),
-                         'tax-free': np.zeros((self.Years, self.count)),
-                         'RothX': np.zeros((self.Years, self.count)),
-                         'bti': np.zeros((self.Years, self.count))
+        self.y2source = {'rmd': np.zeros((self.span, self.count)),
+                         'ssec': np.zeros((self.span, self.count)),
+                         'pension': np.zeros((self.span, self.count)),
+                         'div': np.zeros((self.span, self.count)),
+                         'wages': np.zeros((self.span, self.count)),
+                         'taxable': np.zeros((self.span, self.count)),
+                         'dist': np.zeros((self.span, self.count)),
+                         'tax-free': np.zeros((self.span, self.count)),
+                         'RothX': np.zeros((self.span, self.count)),
+                         'bti': np.zeros((self.span, self.count))
                          }
 
         # Use shorter names:
@@ -739,14 +742,14 @@ class Plan:
         # Beware of names: tax-free income includes
         # distributions from taxable, tax-free account,
         # and part of SS income.
-        self.yincome = {'RothX': np.zeros((self.Years)),
-                        'gross': np.zeros((self.Years)),
-                        'taxes': np.zeros((self.Years)),
-                        'irmaa': np.zeros((self.Years)),
-                        'net': np.zeros((self.Years)),
-                        'target': np.zeros((self.Years)),
-                        'taxable': np.zeros((self.Years)),
-                        'tax-free': np.zeros((self.Years))
+        self.yincome = {'RothX': np.zeros((self.span)),
+                        'gross': np.zeros((self.span)),
+                        'taxes': np.zeros((self.span)),
+                        'irmaa': np.zeros((self.span)),
+                        'net': np.zeros((self.span)),
+                        'target': np.zeros((self.span)),
+                        'taxable': np.zeros((self.span)),
+                        'tax-free': np.zeros((self.span))
                         }
 
         # Shorter names:
@@ -770,7 +773,7 @@ class Plan:
         rawTarget = self.target
 
         # For each year ahead:
-        u.vprint('Computing next', self.Years - 2,
+        u.vprint('Computing next', self.span - 2,
                  'years for', ' and '.join(str(x) for x in self.names))
 
         # Keep track of surviving spouses.
@@ -779,7 +782,7 @@ class Plan:
         wdrlRatio = 1
         depRatio = 1
         # y2accounts have one more value for allowing values[n+1].
-        for n in range(self.Years - 1):
+        for n in range(self.span - 1):
             u.vprint('-------', self.yyear[n],
                      ' -----------------------------------------------')
 
@@ -1079,7 +1082,7 @@ class Plan:
             for key in assetDic:
                 name = key+' / '+acType
                 stackNames.append(name)
-                y2stack[name] = np.zeros((self.count, self.Years))
+                y2stack[name] = np.zeros((self.count, self.span))
                 for i in range(self.count):
                     y2stack[name][i][:] = \
                         self.y2accounts[acType].transpose()[i][:] *\
@@ -1119,7 +1122,7 @@ class Plan:
                 for key in assetDic:
                     aname = key+' / '+acType
                     stackNames.append(aname)
-                    y2stack[aname] = np.zeros((count, self.Years))
+                    y2stack[aname] = np.zeros((count, self.span))
                     y2stack[aname][i][:] = \
                         self.y2assetRatios[acType].\
                         transpose(1, 2, 0)[i][assetDic[key]][:]
@@ -1266,7 +1269,7 @@ class Plan:
 
         fig, ax = self._lineIncomePlot(style, title)
 
-        data = tx.taxBrackets(self.status, self.Years, self.rates)
+        data = tx.taxBrackets(self.status, self.span, self.rates)
 
         '''
         myyears = np.array([2022, 2025, 2026, 2052])
@@ -1542,7 +1545,7 @@ class Plan:
         total += sum(self.y2accounts['tax-free'][-1][:])
         total += (1 - taxRate)*sum(self.y2accounts['tax-deferred'][-1][:])
 
-        div = tx.inflationAdjusted(1., self.Years-1, self.rates)
+        div = tx.inflationAdjusted(1., self.span-1, self.rates)
         value = total/div
 
         return value, (div - 1)
@@ -1550,7 +1553,7 @@ class Plan:
     def estate(self, taxRate=None):
         '''
         Return estimated post-tax value of total of assets at
-        the end of the run in today's $. The tax rate provided
+        the end of the run in today's $. The heirs tax rate provided
         is used to determine an approximate value and provide
         the tax-deferred portion of the portfolio an after-tax
         value. The inflation rates used during the simulation
@@ -1559,7 +1562,7 @@ class Plan:
         estate value.
         '''
         if taxRate is None:
-            taxRate = self.deferredTxRate
+            taxRate = self.heirsTxRate
         else:
             taxRate /= 100
 
@@ -1569,7 +1572,8 @@ class Plan:
         print(self.yyear[-2],
               'Estate: (%d $) %s (nominal %s),' %
               (now, d(val), d(val*(1+percent))),
-              'cum. infl.: %s, tax rate: %s' % (pc(percent), pc(taxRate)))
+              'cum. infl.: %s, heirs tax rate: %s' %
+              (pc(percent), pc(taxRate)))
 
         return
 
@@ -1627,7 +1631,7 @@ class Plan:
         config['Parameters'] = \
             {'Target': str(self.target),
              'Profile': str(self.profile),
-             'Rate on tax-deferred estate': str(100*self.deferredTxRate),
+             'Heirs rate on tax-deferred estate': str(100*self.heirsTxRate),
              'Spousal split': str(self.split),
              'Survivor fraction': str(self.survivorFraction),
              'Time lists file name': str(self.timeListsFileName),
@@ -1673,8 +1677,8 @@ class Plan:
         '''
         Run historical simulation from each year in the rates provided.
         '''
-        to = frm + self.Years - 1
-        N = rates.TO - self.Years - frm + 2
+        to = frm + self.span - 1
+        N = rates.TO - self.span - frm + 2
         estateResults = np.zeros(N)
         successCount = 0
         for i in range(N):
@@ -1685,11 +1689,11 @@ class Plan:
             if self.success:
                 successCount += 1
 
-            # Use tax rate provided on taxable part of estate.
-            estate, factor = self._estate(self.deferredTxRate)
+            # Use heirs tax rate provided on taxable part of estate.
+            estate, factor = self._estate(self.heirsTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
-                  ', tax rate:', pc(self.deferredTxRate))
+                  ', heirs tax rate:', pc(self.heirsTxRate))
             estateResults[i] = estate
             if len(myplots) > 0:
                 # Number of seconds to wait.
@@ -1722,11 +1726,11 @@ class Plan:
             if self.success:
                 successCount += 1
 
-            # Rely on self.deferredTxRate for rate.
-            estate, factor = self._estate(self.deferredTxRate)
+            # Rely on self.heirsTxRate for rate.
+            estate, factor = self._estate(self.heirsTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
                   ', cum. infl.:', pc(factor),
-                  ', tax rate:', pc(self.deferredTxRate))
+                  ', heirs tax rate:', pc(self.heirsTxRate))
             estateResults[i] = estate
 
         print('============================================')
@@ -1889,8 +1893,8 @@ def readPlan(fileName):
 
     plan.setDesiredIncome(float(config['Parameters']['Target']),
                           config['Parameters']['Profile'])
-    plan.setDeferredTaxRate(
-            float(config['Parameters']['Rate on tax-deferred estate']))
+    plan.setHeirsTaxRate(
+            float(config['Parameters']['Heirs rate on tax-deferred estate']))
     plan.setSpousalSplit(config['Parameters']['Spousal split'])
     plan.setSurvivorFraction(
             float(config['Parameters']['Survivor fraction']))
@@ -1952,7 +1956,7 @@ def _pfReturn(assetRatios, rates, year, who):
             assetRatios[year][who][3]*rates[year][3])
 
 
-def age(yob, refYear=0):
+def _age(yob, refYear=0):
     '''
     Return age of individual in year provided. If no year
     is provided, current year will be used.
@@ -2343,7 +2347,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
 
     myConv = startConv
     maxValue = baseValue
-    bestX = np.zeros((p2.Years, p2.count), dtype=int)
+    bestX = np.zeros((p2.span, p2.count), dtype=int)
     trials = 0
     i = 0
     blank = 0
@@ -2428,7 +2432,7 @@ def _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     print('Each dot represents 100 different scenarios tested:')
 
     preValue = baseValue
-    bestX = np.zeros((p2.Years, p2.count), dtype=int)
+    bestX = np.zeros((p2.span, p2.count), dtype=int)
     trials = 0
     kB = minConv/1000
     numAttempts = p2.count*30*8
@@ -2480,8 +2484,8 @@ def _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv):
 def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     '''
     Determines optimal Roth conversions.
-    Goal is to maximize estate given a tax-deferred tax rate.
-    A tax rate for the tax-deferred account must be provided.
+    Goal is to maximize estate given a tax-deferred heirs tax rate.
+    A heirs tax rate for the tax-deferred account must be provided.
     Then, startConv is the largest conversion amount which is
     considered at the beginning. When no more wealth-positive
     conversion can be made, the the amount is reduced by half

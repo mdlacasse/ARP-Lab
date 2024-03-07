@@ -59,7 +59,7 @@ The default choices include:
 These choices have no particular value, except to provide a default case that one can run for demonstration purposes.
 It is anticipated that you will change these default values by using `set___()` functions. The *jack+jill* notebook contains configuration examples describing how to make these values
 match your own assumptions. These include the following calls:
-    `setInitialAR()`, `setFinalAR()`, `setSurvivorFraction()`, `setSpousalSplit()`, `setDeferredTaxRate()`,  `setRates()`, for examples.
+    `setInitialAR()`, `setFinalAR()`, `setSurvivorFraction()`, `setSpousalSplit()`, `setHeirsTaxRate()`,  `setRates()`, for examples.
 
 ## Case studies
 ARP Lab comes with a few notebooks as examples:
