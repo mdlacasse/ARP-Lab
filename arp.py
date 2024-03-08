@@ -1343,6 +1343,48 @@ class Plan:
         return
 
     def saveInstance(self, basename, overwrite=False):
+        '''
+        Save instance in an Excel spreadsheet.
+        The first worksheet will contain income in the following
+        fields in columns:
+            - target income
+            - net income
+            - taxable income
+            - gross income
+            - tax bill (federal only)
+            - IRMAA bill
+        for all the years for the time span of the plan.
+
+        The second worksheet contains the rates
+        used for the plan as follows:
+            - S&P 500
+            - Corporate Baa bonds
+            - Treasury bill (10y)
+            - Inflation.
+
+        The subsequent worksheets has the sources for each
+        spouse as follows:
+            - taxable account withdrawals
+            - RMDs
+            - distributions
+            - Roth conversions
+            - tax-free withdrawals
+            - big-ticket items.
+
+        The subsequent worksheets contains the balances
+        of the savings accounts for each spouse:
+            - taxable savings account
+            - tax-deferred account
+            - tax-free account.
+
+        The last worksheets will contain the allocation
+        ratios for each spouse:
+            - S&P 500
+            - Corporate Baa bonds
+            - Treasury bill (10y)
+            - inflation-indexed assets. 
+
+        '''
         import pandas as pd
         from openpyxl import Workbook
         from openpyxl.utils.dataframe import dataframe_to_rows
@@ -2515,7 +2557,7 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     newValue, mul = p2._estate(txrate)
     now = datetime.date.today().year
     print('Estate (in %d $) increased from' % now, d(baseValue),
-          'to', d(newValue), '( +', d(newValue - baseValue), ')')
+          'to', d(newValue), '(+%s)' % d(newValue - baseValue))
 
     u.setVerbose(prevState)
 
