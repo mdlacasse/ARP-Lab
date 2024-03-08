@@ -1692,7 +1692,7 @@ class Plan:
             # Use heirs tax rate provided on taxable part of estate.
             estate, factor = self._estate(self.heirsTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  ', cum. infl.:', pc(factor),
+                  '\n\tcum. infl.:', pc(factor),
                   ', heirs tax rate:', pc(self.heirsTxRate))
             estateResults[i] = estate
             if len(myplots) > 0:
@@ -1729,7 +1729,7 @@ class Plan:
             # Rely on self.heirsTxRate for rate.
             estate, factor = self._estate(self.heirsTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  ', cum. infl.:', pc(factor),
+                  '\n\tcum. infl.:', pc(factor),
                   ', heirs tax rate:', pc(self.heirsTxRate))
             estateResults[i] = estate
 
