@@ -2342,7 +2342,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                     / sum(p2.y2accounts['tax-deferred'][0][:]))
         ratio[1] = 1 - ratio[0]
 
-    print('Starting Roth optimizer. This calculation takes about a minute.')
+    print('Starting Roth optimizer. This calculation takes less than a few minutes.')
     print('Each dot represents 100 different scenarios tested:')
 
     myConv = startConv
