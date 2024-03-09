@@ -43,6 +43,9 @@ class Plan:
         This information will determine the size of arrays required
         for the calculations.
         '''
+        # Name defaults to Untitled.
+        self._name = 'Untitled'
+
         # Check validity of inputs.
         self.count = len(YOB)
         assert (self.count == len(expectancy))
@@ -164,6 +167,15 @@ class Plan:
 
         # Track if run was successful. Successful until it fails.
         self.success = True
+
+        return
+
+    def setName(self, name):
+        '''
+        Provide a name to the plan. This name is used
+        to distinguish the output.
+        '''
+        self._name = name
 
         return
 
@@ -773,7 +785,7 @@ class Plan:
         rawTarget = self.target
 
         # For each year ahead:
-        u.vprint('Computing next', self.span - 2,
+        u.vprint('Computing plan \'%s\'' % self._name, 'for next', self.span - 2,
                  'years for', ' and '.join(str(x) for x in self.names))
 
         # Keep track of surviving spouses.
@@ -1044,8 +1056,7 @@ class Plan:
                     if surviving == 0:
                         if self.count == 2:
                             u.vprint('Both spouses have passed.')
-                        return self.yyear, self.y2accounts, \
-                            self.y2source, self.yincome
+                        return
 
                     self._transferWealth(n+1, j)
 
@@ -1065,7 +1076,7 @@ class Plan:
                 u.vprint('==================================================')
                 break
 
-        return self.yyear, self.y2accounts, self.y2source, self.yincome
+        return
 
     def showAssetDistribution(self, tag=''):
         '''
@@ -1090,7 +1101,7 @@ class Plan:
                         transpose(1, 2, 0)[i][assetDic[key]][:]
                 y2stack[name] = y2stack[name].transpose()
 
-            title = 'Assets Distribution - '+acType
+            title = self._name + '\nAssets Distribution - '+acType
             if tag != '':
                 title += ' - '+tag
 
@@ -1128,7 +1139,7 @@ class Plan:
                         transpose(1, 2, 0)[i][assetDic[key]][:]
                     y2stack[aname] = y2stack[aname].transpose()
 
-                    title = 'Assets Allocations (%) - '+acType
+                    title = self._name + '\nAssets Allocations (%) - '+acType
                     if self.coordinatedAR == 'both':
                         title += ' both'
                     else:
@@ -1147,7 +1158,7 @@ class Plan:
         '''
         Plot values of savings accounts over time.
         '''
-        title = 'Savings Balance'
+        title = self._name + '\nSavings Balance'
         if tag != '':
             title += ' - '+tag
         types = ['taxable', 'tax-deferred', 'tax-free']
@@ -1161,7 +1172,7 @@ class Plan:
         '''
         Plot income over time.
         '''
-        title = 'Raw Income Sources'
+        title = self._name+'\nRaw Income Sources'
         if tag != '':
             title += ' - '+tag
 
@@ -1220,7 +1231,7 @@ class Plan:
         '''
         Plot net income and target over time.
         '''
-        title = 'Net Income vs. Target'
+        title = self._name + '\nNet Income vs. Target'
         if tag != '':
             title += ' - '+tag
 
@@ -1236,7 +1247,7 @@ class Plan:
         import matplotlib.pyplot as plt
         import matplotlib.ticker as tk
 
-        fig, ax = plt.subplots(figsize=(6, 3))
+        fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
 
         for aType in style:
@@ -1261,7 +1272,7 @@ class Plan:
         '''
         import matplotlib.pyplot as plt
 
-        title = 'Gross Income vs. Tax Brackets'
+        title = self._name + '\nGross Income vs. Tax Brackets'
         if tag != '':
             title += ' - '+tag
 
@@ -1292,7 +1303,7 @@ class Plan:
         '''
         Plot income tax paid over time.
         '''
-        title = 'Income Tax and IRMAA'
+        title = self._name + '\nIncome Tax and IRMAA'
         if tag != '':
             title += ' - '+tag
 
@@ -1312,7 +1323,7 @@ class Plan:
 
         fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
-        title = 'Return & Inflation Rates ('+str(self.rateMethod)
+        title = self._name + '\nReturn & Inflation Rates ('+str(self.rateMethod)
         if self.rateMethod in ['historical', 'stochastic', 'average']:
             title += ' '+str(self.rateFrm)+'-'+str(self.rateTo)
         elif self.rateMethod == 'fixed':
@@ -1611,7 +1622,7 @@ class Plan:
         val, percent = self._estate(taxRate)
 
         now = datetime.date.today().year
-        print(self.yyear[-2],
+        print('\'%s\'' % self._name, self.yyear[-2],
               'Estate: (%d $) %s (nominal %s),' %
               (now, d(val), d(val*(1+percent))),
               'cum. infl.: %s, heirs tax rate: %s' %
@@ -2556,7 +2567,7 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     p2.run()
     newValue, mul = p2._estate(txrate)
     now = datetime.date.today().year
-    print('Estate (in %d $) increased from' % now, d(baseValue),
+    print(p2.yyear[-2], 'Estate (in %d $) increased from' % now, d(baseValue),
           'to', d(newValue), '(+%s)' % d(newValue - baseValue))
 
     u.setVerbose(prevState)
@@ -2564,13 +2575,21 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     return p2, bestX
 
 
-def clone(plan):
+def clone(plan, name=''):
     '''
-    Return an identical copy of plan.
+    Return an almost identical copy of plan.
+    Only the name wiil be modified and appended '(copy)',
+    unless a new name is provided as an argument.
     '''
     import copy
 
-    return copy.deepcopy(plan)
+    newplan = copy.deepcopy(plan)
+    if name != '':
+        newplan.setName(name)
+    else:
+        newplan.setName(plan._name + ' (copy)')
+
+    return newplan
 
 
 def isInJupyter():

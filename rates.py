@@ -235,8 +235,8 @@ class rates:
         self._defRates = np.array([0.1101, 0.0736, 0.0503, 0.0251])
 
         # Conservative rates are average predictions of major firms
-        # as reported by MorningStar.
-        self._conservRates = np.array([0.06, 0.04, 0.03, 0.025])
+        # as reported by MorningStar in 2023.
+        self._conservRates = np.array([0.086, 0.049, 0.033, 0.025])
 
         self.frm = 0
         self.to = len(SP500)
