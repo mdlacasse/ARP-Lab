@@ -234,9 +234,12 @@ class rates:
         # Default rates are average over last 30 years.
         self._defRates = np.array([0.1101, 0.0736, 0.0503, 0.0251])
 
-        # Conservative rates are average predictions of major firms
+        # Realistic rates are average predictions of major firms
         # as reported by MorningStar in 2023.
-        self._conservRates = np.array([0.086, 0.049, 0.033, 0.025])
+        self._realisticRates = np.array([0.086, 0.049, 0.033, 0.025])
+
+        # Conservative rates.
+        self._conservRates = np.array([0.06, 0.04, 0.035, 0.028])
 
         self.frm = 0
         self.to = len(SP500)
@@ -252,12 +255,21 @@ class rates:
         self.covar = np.zeros((4))
 
     def setMethod(self, method, frm=FROM, to=TO, values=None):
+        '''
+        Select the method to generate the annual rates of return
+        for the different classes of assets.
+        '''
         if method == 'default':
             self.method = 'default'
             # Convert decimal to percent for reporting.
             u.vprint('Using default fixed rates values: (%)\n',
                      100.*self._defRates)
             self._setFixedRates(self._defRates)
+            return
+        elif method == 'realistic':
+            u.vprint('Using realistic fixed rates values: (%)\n',
+                     100.*self._realisticRates)
+            self._setFixedRates(self._realisticRates)
             return
         elif method == 'conservative':
             u.vprint('Using conservative fixed rates values: (%)\n',

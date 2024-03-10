@@ -423,6 +423,13 @@ class Plan:
         '''
         Generate rates for return and inflation based on the method and
         years selected. Note that last bound is included.
+
+        The following methods are available:
+        default, fixed, realistic, conservative, average, and historical.
+        
+        For *fixed*, values must be provided.
+        For *average*, and *historical*, a range of years can be provided.
+
         '''
         dr = rates.rates()
         dr.setMethod(method, frm, to, values)
@@ -1625,7 +1632,7 @@ class Plan:
         print('\'%s\'' % self._name, self.yyear[-2],
               'Estate: (%d $) %s (nominal %s),' %
               (now, d(val), d(val*(1+percent))),
-              'cum. infl.: %s, heirs tax rate: %s' %
+              '\n\t\tcum. infl.: %s, heirs tax rate: %s' %
               (pc(percent), pc(taxRate)))
 
         return
@@ -1745,7 +1752,7 @@ class Plan:
             # Use heirs tax rate provided on taxable part of estate.
             estate, factor = self._estate(self.heirsTxRate)
             print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  '\n\tcum. infl.:', pc(factor),
+                  '\n\t\tcum. infl.:', pc(factor),
                   ', heirs tax rate:', pc(self.heirsTxRate))
             estateResults[i] = estate
             if len(myplots) > 0:
@@ -2550,6 +2557,8 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     or 128,000 for example.
     '''
     p2 = clone(p)
+    p2.setName(p._name+' (opt\'ed)')
+
     txrate /= 100
 
     prevState = u.setVerbose(False)
