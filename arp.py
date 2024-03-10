@@ -426,7 +426,7 @@ class Plan:
 
         The following methods are available:
         default, fixed, realistic, conservative, average, and historical.
-        
+
         For *fixed*, values must be provided.
         For *average*, and *historical*, a range of years can be provided.
 
@@ -699,7 +699,7 @@ class Plan:
                 totWages[who] += fac*self.y2source['wages'][n][who]
                 totRothX[who] += fac*self.y2source['RothX'][n][who]
 
-        print('\nTotals (in today\'s $):\n',
+        print('\nTotals for %r (in today\'s $):\n' % self._name,
               '\tNet income:', d(totNetIncome), '\n',
               '\tIncome taxes:', d(totTaxes), '\n',
               '\tIRMAA:', d(totIrmaa),
@@ -792,7 +792,7 @@ class Plan:
         rawTarget = self.target
 
         # For each year ahead:
-        u.vprint('Computing plan \'%s\'' % self._name, 'for next', self.span - 2,
+        u.vprint('Computing plan %r' % self._name, 'for next', self.span - 2,
                  'years for', ' and '.join(str(x) for x in self.names))
 
         # Keep track of surviving spouses.
@@ -1179,7 +1179,7 @@ class Plan:
         '''
         Plot income over time.
         '''
-        title = self._name+'\nRaw Income Sources'
+        title = self._name + '\nRaw Income Sources'
         if tag != '':
             title += ' - '+tag
 
@@ -1330,7 +1330,8 @@ class Plan:
 
         fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
-        title = self._name + '\nReturn & Inflation Rates ('+str(self.rateMethod)
+        title = (self._name + '\nReturn & Inflation Rates ('
+                 + str(self.rateMethod))
         if self.rateMethod in ['historical', 'stochastic', 'average']:
             title += ' '+str(self.rateFrm)+'-'+str(self.rateTo)
         elif self.rateMethod == 'fixed':
@@ -1400,7 +1401,7 @@ class Plan:
             - S&P 500
             - Corporate Baa bonds
             - Treasury bill (10y)
-            - inflation-indexed assets. 
+            - inflation-indexed assets.
 
         '''
         import pandas as pd
@@ -1629,7 +1630,7 @@ class Plan:
         val, percent = self._estate(taxRate)
 
         now = datetime.date.today().year
-        print('\'%s\'' % self._name, self.yyear[-2],
+        print('%r' % self._name, self.yyear[-2],
               'Estate: (%d $) %s (nominal %s),' %
               (now, d(val), d(val*(1+percent))),
               '\n\t\tcum. infl.: %s, heirs tax rate: %s' %
@@ -2402,7 +2403,8 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                     / sum(p2.y2accounts['tax-deferred'][0][:]))
         ratio[1] = 1 - ratio[0]
 
-    print('Starting Roth optimizer. This calculation takes less than a few minutes.')
+    print('Starting Roth optimizer.',
+          'This calculation takes less than a few minutes.')
     print('Each dot represents 100 different scenarios tested:')
 
     myConv = startConv
