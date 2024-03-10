@@ -531,7 +531,7 @@ class Plan:
         each spouse and must have the following column headers:
 
                 'year',
-                'anticipated income',
+                'anticipated wages',
                 'ctrb taxable',
                 'ctrb 401k',
                 'ctrb Roth 401k',
@@ -837,10 +837,10 @@ class Plan:
                     ys2RothX[n][i] = tmp
                     yRothX[n] += tmp
 
-                # Add anticipated income for the year.
-                tmp = self.timeLists[i]['anticipated income'][n]
+                # Add anticipated wages for the year.
+                tmp = self.timeLists[i]['anticipated wages'][n]
                 if tmp > 0:
-                    u.vprint(self.names[i], 'reported income of', d(tmp))
+                    u.vprint(self.names[i], 'reported wages of', d(tmp))
                     ys2wages[n][i] += tmp
                     ytaxableIncome[n] += tmp
 
@@ -2068,7 +2068,7 @@ def _readTimeLists(filename, n):
 
     # Expected headers in each excel sheet, one per individual.
     timeHorizonItems = ['year',
-                        'anticipated income',
+                        'anticipated wages',
                         'ctrb taxable',
                         'ctrb 401k',
                         'ctrb Roth 401k',
@@ -2125,7 +2125,7 @@ def _checkTimeLists(names, timeLists, horizons):
                      'but ends in', timeLists[i]['year'][-1])
 
     timeHorizonItems = ['year',
-                        'anticipated income',
+                        'anticipated wages',
                         'ctrb taxable',
                         'ctrb 401k',
                         'ctrb Roth 401k',
