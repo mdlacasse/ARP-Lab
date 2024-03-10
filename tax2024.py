@@ -41,7 +41,7 @@ def inflationAdjusted(base, year, rates, refIndex=0):
     assert index >= refIndex
 
     fac = 1
-    if type(rates) == float:
+    if type(rates) is float:
         # Sign will take care of division.
         fac *= (1 + rates)**(index - refIndex)
     elif index >= refIndex:
