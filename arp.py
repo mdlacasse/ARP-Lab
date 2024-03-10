@@ -854,8 +854,9 @@ class Plan:
                 ys2div[n][i] = min(0, growth)
                 ya2taxable[n+1][i] += ya2taxable[n][i] + ctrb + growth
                 ytaxableIncome[n] += min(0, growth)
-                u.vprint(self.names[i], 'Taxable account growth:',
-                         d(ya2taxable[n][i]), '->', d(ya2taxable[n+1][i]))
+                if ctrb > 0 or growth > 0:
+                    u.vprint(self.names[i], 'Taxable account growth:',
+                             d(ya2taxable[n][i]), '->', d(ya2taxable[n+1][i]))
 
                 # Same for tax-deferred, including RMDs on year-end balance.
                 ctrb = self.timeLists[i]['ctrb 401k'][n] + \
@@ -867,11 +868,15 @@ class Plan:
 
                 ya2taxDef[n+1][i] += ya2taxDef[n][i] + ctrb + growth
 
-                u.vprint(self.names[i], 'Tax-deferred account growth:',
-                         d(ya2taxDef[n][i]), '->', d(ya2taxDef[n+1][i]))
+                if ctrb > 0 or growth > 0:
+                    u.vprint(self.names[i], 'Tax-deferred account growth:',
+                             d(ya2taxDef[n][i]), '->', d(ya2taxDef[n+1][i]))
 
                 rmd = ya2taxDef[n+1][i] * \
                     tx.rmdFraction(self.yyear[n], self.yob[i])
+
+                if rmd > 0:
+                    u.vprint(self.names[i], 'RMD:', d(rmd))
 
                 ya2taxDef[n+1][i] -= rmd
                 ys2rmd[n][i] = rmd
@@ -886,8 +891,9 @@ class Plan:
 
                 ya2taxFree[n+1][i] += ya2taxFree[n][i] + ctrb + growth
 
-                u.vprint(self.names[i], 'Tax-free account growth:',
-                         d(ya2taxFree[n][i]), '->', d(ya2taxFree[n+1][i]))
+                if ctrb > 0 or growth > 0:
+                    u.vprint(self.names[i], 'Tax-free account growth:',
+                             d(ya2taxFree[n][i]), '->', d(ya2taxFree[n+1][i]))
 
                 # Compute fixed income for this year:
                 ys2pension[n][i] = self._computePension(n, i)
