@@ -1696,7 +1696,8 @@ class Plan:
 
         # Joint parameters.
         config['Parameters'] = \
-            {'Target': str(self.target),
+            {'Name': self._name,
+             'Target': str(self.target),
              'Profile': str(self.profile),
              'Heirs rate on tax-deferred estate': str(100*self.heirsTxRate),
              'Spousal split': str(self.split),
@@ -1879,9 +1880,10 @@ def readPlan(fileName):
     config = configparser.ConfigParser()
     config.read(fileName+'.cfg')
 
-    count = int(config['Who']['Count'])
-    names = config['Who']['Names'].split(',')
-    coordinatedAR = config['Parameters']['Coordinated allocations']
+    count = int(config['Who']['count'])
+    names = config['Who']['names'].split(',')
+    coordinatedAR = config['Parameters']['coordinated allocations']
+    name = config['Parameters']['name']
 
     # Parameters getting one value for each spouse.
     yob = []
@@ -1895,7 +1897,6 @@ def readPlan(fileName):
     n2balances = {}
     initialAR = {}
     finalAR = {}
-    coordinatedAR = config['Parameters']['Coordinated allocations']
 
     if coordinatedAR == 'none':
         listAR = ['taxable', 'tax-deferred', 'tax-free']
@@ -1933,6 +1934,7 @@ def readPlan(fileName):
             finalAR[aType][k] = [float(j) for j in finalAR[aType][k]]
 
     plan = Plan(yob, expectancy)
+    plan.setName(name)
     plan.setPension(pensionAmounts, pensionAges)
     plan.setSocialSecurity(ssecAmounts, ssecAges)
     plan.setAssetBalances(taxable=n2balances['taxable'],
@@ -2488,67 +2490,6 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
     return bestX
 
 
-def _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv):
-    '''
-    Determine best Roth conversions through annealing approach.
-    Minimum conversion considered is minConv.
-    '''
-    import random
-    random.seed()
-
-    print('Starting Roth optimizer. This calculation takes about 5 min.')
-    print('Each dot represents 100 different scenarios tested:')
-
-    preValue = baseValue
-    bestX = np.zeros((p2.span, p2.count), dtype=int)
-    trials = 0
-    kB = minConv/1000
-    numAttempts = p2.count*30*8
-
-    for T in range(101, 0, -2):
-        flipCount = 0
-        for k in range(0, numAttempts):
-            trials += 1
-            '''
-            if trials % 100 == 0:
-                print('.', end='')
-                if trials % 1000 == 0:
-                    print()
-            '''
-
-            # Single move.
-            rothX = minConv
-            i = int(random.random()*p2.count)
-            n = int(random.random()*p2.horizons[i])
-            xnow = p2.timeLists[i]['Roth X'][n]
-
-            if xnow > 0 and random.random() > 0.5:
-                rothX *= -1
-
-            if rothX < 0:
-                rothX = int(max(rothX, -xnow))
-            else:
-                rothX = int(min(rothX, p2.y2accounts['tax-deferred'][n][i]))
-
-            p2.timeLists[i]['Roth X'][n] += rothX
-            p2.run()
-
-            newValue, mul2 = p2._estate(txrate)
-            if newValue >= preValue or \
-                    random.random() < math.exp((newValue-preValue)/(kB*T)):
-                preValue = newValue
-                bestX[n][i] = p2.timeLists[i]['Roth X'][n]
-                flipCount += 1
-            else:
-                p2.timeLists[i]['Roth X'][n] -= rothX
-
-        print('T:', T, 'Success rate:', pc(flipCount/numAttempts))
-
-    print('\nReturning after', trials, 'trials.')
-
-    return bestX
-
-
 def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     '''
     Determines optimal Roth conversions.
@@ -2565,7 +2506,7 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     or 128,000 for example.
     '''
     p2 = clone(p)
-    p2.setName(p._name+' (opt\'ed)')
+    p2.setName(p._name+' (optimized)')
 
     txrate /= 100
 
@@ -2579,7 +2520,6 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     p2.run()
     baseValue, mul = p2._estate(txrate)
 
-    # bestX = _tempAnnealRoth(p2, baseValue, txrate, minConv, startConv)
     bestX = _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv)
     p2.run()
     newValue, mul = p2._estate(txrate)
@@ -2624,25 +2564,4 @@ def isInJupyter():
 
     return True
 
-
-class geometry:
-    '''
-    Class to make plot not overlapping all on one another on windows.
-    '''
-    window = 0
-
-    def __init__(self):
-        pass
-
-    def setGeometry(self):
-        if isInJupyter() is False:
-            import matplotlib.pyplot as plt
-            mgr = plt.get_current_fig_manager()
-            x = (self.window % 2)*800
-            y = 40 + (self.window*10)
-            mgr.window.setGeometry(x, y, 720, 600)
-            # print('Setting geometry to:', x, y)
-            self.window += 1
-
-        return
 
