@@ -1097,6 +1097,8 @@ class Plan:
         during the simulation time. This function will generate three
         graphs, one for taxable accounts, one the tax-deferred accounts,
         and one for tax-free accounts.
+
+        A tag string can be set to add information to the title of the plot.
         '''
 
         y2stack = {}
@@ -1128,6 +1130,8 @@ class Plan:
         Plot desired allocation of savings accounts in percentage
         over simulation time and interpolated by the selected method
         through the interpolateAR() method.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         count = self.count
         if self.coordinatedAR == 'both':
@@ -1170,6 +1174,8 @@ class Plan:
     def showAccounts(self, tag=''):
         '''
         Plot values of savings accounts over time.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         title = self._name + '\nSavings Balance'
         if tag != '':
@@ -1184,6 +1190,8 @@ class Plan:
     def showSources(self, tag=''):
         '''
         Plot income over time.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         title = self._name + '\nRaw Income Sources'
         if tag != '':
@@ -1243,6 +1251,8 @@ class Plan:
     def showNetIncome(self, tag=''):
         '''
         Plot net income and target over time.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         title = self._name + '\nNet Income vs. Target'
         if tag != '':
@@ -1282,6 +1292,8 @@ class Plan:
     def showGrossIncome(self, tag=''):
         '''
         Plot income tax and taxable income over time horizon.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         import matplotlib.pyplot as plt
 
@@ -1315,6 +1327,8 @@ class Plan:
     def showTaxes(self, tag=''):
         '''
         Plot income tax paid over time.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         title = self._name + '\nIncome Tax and IRMAA'
         if tag != '':
@@ -1331,6 +1345,8 @@ class Plan:
     def showRates(self, tag=''):
         '''
         Plot rate values used over the time horizon.
+
+        A tag string can be set to add information to the title of the plot.
         '''
         import matplotlib.pyplot as plt
 
@@ -2394,12 +2410,15 @@ def _printDot(trials):
             print()
 
 
-def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
+def _amountAnnealRoth(p2, baseValue, txrate,
+                      minConv, startConv, only):
     '''
     Determine best Roth conversions through mixed sweeping approach,
     starting from large conversions being reduced by half over the
     simulation. Starting conversion amount is startConv.
     Minimum conversion considered is minConv.
+    For married couples, the *only* parameter is used to restrict
+    conversions to the individual named.
     '''
     import random
     random.seed()
@@ -2415,27 +2434,37 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
           'This calculation takes less than a few minutes.')
     print('Each dot represents 100 different scenarios tested:')
 
+    # Allow all to make conversions.
+    if only is None:
+        count = p2.count
+        whos = range(p2.count)
+    else:
+        who = p2.names.index(only)
+        count = 1
+        whos = range(who,who+1)
+
     myConv = startConv
     maxValue = baseValue
     bestX = np.zeros((p2.span, p2.count), dtype=int)
     trials = 0
-    i = 0
     blank = 0
+    i = 0
+    who = whos[i]
     while myConv >= minConv:
         nMax = -1
         rothXmax = 0
         loopMax = maxValue
         # No conversion during last year?
-        for n in range(p2.horizons[i]):
-            rothX = tx.inflationAdjusted(myConv*ratio[i], n, p2.rates)
+        for n in range(p2.horizons[who]):
+            rothX = tx.inflationAdjusted(myConv*ratio[who], n, p2.rates)
 
-            if rothX > p2.y2accounts['tax-deferred'][n][i]:
+            if rothX > p2.y2accounts['tax-deferred'][n][who]:
                 break
 
-            p2.timeLists[i]['Roth X'][n] += rothX
+            p2.timeLists[who]['Roth X'][n] += rothX
             p2.run()
             newValue, mul2 = p2._estate(txrate)
-            p2.timeLists[i]['Roth X'][n] -= rothX
+            p2.timeLists[who]['Roth X'][n] -= rothX
 
             if newValue > loopMax:
                 loopMax = newValue
@@ -2447,14 +2476,14 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
 
         if nMax >= 0:
             maxValue = loopMax
-            p2.timeLists[i]['Roth X'][nMax] += rothXmax
-            bestX[nMax][i] += rothXmax
+            p2.timeLists[who]['Roth X'][nMax] += rothXmax
+            bestX[nMax][who] += rothXmax
         else:
             blank += 1
 
         # If nothing happened during two last rounds:
         # reduce conversion amount and look for overshoots.
-        if blank == p2.count:
+        if blank == count:
             myConv /= 2
             blank = 0
 
@@ -2462,7 +2491,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
             success = True
             while success:
                 success = False
-                for j in range(p2.count):
+                for j in whos:
                     for n in reversed(range(p2.horizons[j])):
                         rothX = tx.inflationAdjusted(
                                     myConv*ratio[j], n, p2.rates)
@@ -2483,14 +2512,14 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv):
                             _printDot(trials)
 
         # Alternating between individuals if needed.
-        i = (i+1) % p2.count
+        i = (i+1) % count
 
     print('\nReturning after', trials, 'trials.')
 
     return bestX
 
 
-def optimizeRoth(p, txrate, minConv=500, startConv=32000):
+def optimizeRoth(p, txrate, minConv=500, startConv=32000, only=None):
     '''
     Determines optimal Roth conversions.
     Goal is to maximize estate given a tax-deferred heirs tax rate.
@@ -2504,6 +2533,10 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     Due to this division, it is better to choose a number for
     startConv that is related to a power of 2. Choosing 64,000
     or 128,000 for example.
+
+    For married couples, the *only* parameter is used to restrict
+    conversions to the individual named, as not every plans allow for
+    Roth conversions.
     '''
     p2 = clone(p)
     p2.setName(p._name+' (optimized)')
@@ -2520,7 +2553,8 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000):
     p2.run()
     baseValue, mul = p2._estate(txrate)
 
-    bestX = _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv)
+    bestX = _amountAnnealRoth(p2, baseValue, txrate,
+                              minConv, startConv, only)
     p2.run()
     newValue, mul = p2._estate(txrate)
     now = datetime.date.today().year
