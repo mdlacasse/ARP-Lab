@@ -205,16 +205,14 @@ tax2017_S = {12100: 0.10,
              }
 
 
-def taxBrackets(status, horizon, rates):
+def taxBrackets(status, horizons, rates):
     '''
     Return dictionary containing inflation-adjusted future tax
     brackets for plotting.
     '''
     # brackets = ['10%', '12/15%', '22/25%', '24/28%',
     #             '32/33%', '35%', '37/40%']
-    # Skip the first bracket and last one.
-    # By given that values of dic are 'up to' we need to shift by one anyway.
-    shift = 0
+    # Skip the first bracket.
     brackets = ['12/15%', '22/25%', '24/28%', '32/33%', '35%', '37/40%']
 
     if status == 'married':
@@ -226,15 +224,23 @@ def taxBrackets(status, horizon, rates):
     else:
         u.xprint('Unknown status', status)
 
+    survivor = list(tax2024_S.keys())
+    horizon = max(horizons) + 1
+    switch = min(horizons) 
     data = {}
     for k in range(len(brackets)):
         array = np.zeros(horizon)
         for n in range(horizon):
             if n < 2:
-                v = list1[k + shift]
+                v = list1[k]
             else:
-                v = list2[k + shift]
+                v = list2[k]
 
+            array[n] = inflationAdjusted(v, n, rates)
+
+        # When/if one spouse has passed.
+        for n in range(switch, horizon):
+            v = survivor[k]
             array[n] = inflationAdjusted(v, n, rates)
 
         data[brackets[k]] = array

@@ -1305,7 +1305,7 @@ class Plan:
 
         fig, ax = self._lineIncomePlot(style, title)
 
-        data = tx.taxBrackets(self.status, self.span, self.rates)
+        data = tx.taxBrackets(self.status, self.horizons, self.rates)
 
         '''
         myyears = np.array([2022, 2025, 2026, 2052])
@@ -2431,8 +2431,8 @@ def _amountAnnealRoth(p2, baseValue, txrate,
         ratio[1] = 1 - ratio[0]
 
     print('Starting Roth optimizer.',
-          'This calculation takes less than a few minutes.')
-    print('Each dot represents 100 different scenarios tested:')
+          '\n\tThis calculation typically takes less than a few minutes.')
+    print('\tEach dot represents 100 different scenarios tested:')
 
     # Allow all to make conversions.
     if only is None:
@@ -2519,7 +2519,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
     return bestX
 
 
-def optimizeRoth(p, txrate, minConv=500, startConv=32000, only=None):
+def optimizeRoth(p, txrate, minConv=10, startConv=64000, only=None):
     '''
     Determines optimal Roth conversions.
     Goal is to maximize estate given a tax-deferred heirs tax rate.
@@ -2535,7 +2535,7 @@ def optimizeRoth(p, txrate, minConv=500, startConv=32000, only=None):
     or 128,000 for example.
 
     For married couples, the *only* parameter is used to restrict
-    conversions to the individual named, as not every plans allow for
+    conversions to the individual named, as not all plans allow for
     Roth conversions.
     '''
     p2 = clone(p)
