@@ -148,18 +148,17 @@ class Plan:
         self.interpolateAR()
 
         self.reset()
+        self.setRates('default')
 
     def reset(self):
         '''
         Reset variables that will change from one run to the other.
         '''
         self.rates = None
-        self.rateMethod = 'default'
+        self.rateMethod = None
         self.rateFrm = None
         self.rateTo = None
         self.rateValues = None
-
-        self.setRates('default')
 
         self.y2accounts = None
         self.y2source = None
@@ -714,11 +713,14 @@ class Plan:
 
         return
 
-    def run(self):
+    def run(self, verbose=None):
         '''
         Run a simulation given the underlying assumptions for
         the next horizon years determined by life expectancies.
         '''
+        if verbose is not None:
+            prevState = u.setVerbose(verbose)
+
         # Keep data in [year][who] for now.
         # We'll transpose later if needed when plotting.
         self.y2accounts = {}
@@ -1069,6 +1071,8 @@ class Plan:
                     if surviving == 0:
                         if self.count == 2:
                             u.vprint('Both spouses have passed.')
+                        if verbose is not None:
+                            u.setVerbose(prevState)
                         return
 
                     self._transferWealth(n+1, j)
@@ -1088,6 +1092,9 @@ class Plan:
                 u.vprint('Aborting scenario early due to account exhaustion.')
                 u.vprint('==================================================')
                 break
+
+        if verbose is not None:
+            u.setVerbose(prevState)
 
         return
 
@@ -1767,7 +1774,7 @@ class Plan:
         successCount = 0
         for i in range(N):
             print('--------------------------------------------')
-            print('Running case #', i, '(', frm+i, ')')
+            print('Running case # %d (%r)' % (i, frm+i))
             self._runOnce('historical', frm+i, to+i, myplots=myplots, tag=tag)
             print('Plan success:', self.success)
             if self.success:
@@ -1800,6 +1807,7 @@ class Plan:
         '''
         Run N simulations using a stochastic sinulation.
         '''
+        prevState = u.setVerbose(False)
         estateResults = np.zeros(N)
         successCount = 0
         for i in range(N):
@@ -1824,6 +1832,7 @@ class Plan:
               d(np.median(estateResults)))
 
         showHistogram(estateResults, binDiv=5)
+        u.setVerbose(prevState)
 
         return
 
@@ -2441,7 +2450,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
     else:
         who = p2.names.index(only)
         count = 1
-        whos = range(who,who+1)
+        whos = range(who, who+1)
 
     myConv = startConv
     maxValue = baseValue

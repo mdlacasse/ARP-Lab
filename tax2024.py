@@ -226,11 +226,12 @@ def taxBrackets(status, horizons, rates):
 
     survivor = list(tax2024_S.keys())
     horizon = max(horizons) + 1
-    switch = min(horizons) 
+    switch = min(horizons)
     data = {}
     for k in range(len(brackets)):
         array = np.zeros(horizon)
-        for n in range(horizon):
+        for n in range(switch):
+            # This 2 is the number of years left in TCJA from 2024.
             if n < 2:
                 v = list1[k]
             else:
