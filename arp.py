@@ -2548,7 +2548,7 @@ def optimizeRoth(p, txrate, minConv=10, startConv=64000, only=None):
     Roth conversions.
     '''
     p2 = clone(p)
-    p2.setName(p._name+' (optimized)')
+    p2.setName(p._name+' (Roth optimized)')
 
     txrate /= 100
 
