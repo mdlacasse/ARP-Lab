@@ -1370,7 +1370,7 @@ class Plan:
         if tag != '':
             title += ' - '+tag
 
-        rateName = ['S&P500 including dividends', 'AA Corporate bonds',
+        rateName = ['S&P500 including dividends', 'Baa Corporate bonds',
                     '10-y Treasury bonds', 'Inflation']
         ltype = ['-', '-.', ':', '--']
         for i in range(4):
