@@ -25,6 +25,7 @@ def setVerbose(val):
     verbose = val
     # Force the use of the verbose variable through this following call.
     vprint("Setting verbose to", val)
+
     return prevState
 
 
@@ -35,6 +36,8 @@ def vprint(*args, **kwargs):
     global verbose
     if verbose:
         print(*args)
+
+    return
 
 
 def xprint(*args, **kwargs):
