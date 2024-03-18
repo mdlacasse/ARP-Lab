@@ -2496,7 +2496,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
             myConv /= 2
             blank = 0
 
-            # Remove overshoots.
+            # Backtracking - remove overshoots.
             success = True
             while success:
                 success = False
