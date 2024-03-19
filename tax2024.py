@@ -43,15 +43,15 @@ def inflationAdjusted(base, year, rates, refIndex=0):
     fac = 1
     if type(rates) is float:
         # Sign will take care of division.
-        fac *= (1 + rates)**(index - refIndex)
+        fac *= (1 + rates) ** (index - refIndex)
     elif index >= refIndex:
         for i in range(refIndex, index):
-            fac *= (1 + rates[i][3])
+            fac *= 1 + rates[i][3]
     else:
         for i in range(index, refIndex):
-            fac /= (1 + rates[i][3])
+            fac /= 1 + rates[i][3]
 
-    return base*fac
+    return base * fac
 
 
 def irmaa(magi, filingStatus, year, rates):
@@ -62,12 +62,22 @@ def irmaa(magi, filingStatus, year, rates):
     the rates for adjustments are for the current time.
     '''
 
-    table2024_MFJ = {206000: 0, 258000: 838.80,
-                     322000: 2096.40, 386000: 3354.00,
-                     750000: 4611.60, 99999999: 5031.60}
-    table2024_S = {103000: 0, 129000: 838.80,
-                   161000: 2096.40, 193000: 3354.00,
-                   500000: 4611.60, 99999999: 5031.60}
+    table2024_MFJ = {
+        206000: 0,
+        258000: 838.80,
+        322000: 2096.40,
+        386000: 3354.00,
+        750000: 4611.60,
+        99999999: 5031.60,
+    }
+    table2024_S = {
+        103000: 0,
+        129000: 838.80,
+        161000: 2096.40,
+        193000: 3354.00,
+        500000: 4611.60,
+        99999999: 5031.60,
+    }
 
     if filingStatus == 'married':
         table = table2024_MFJ
@@ -124,41 +134,73 @@ def rmdFraction(year, yob):
     needs to be distributed.
     '''
 
-    rmdTable = [27.4, 26.5, 25.5, 24.6, 23.7, 22.9, 22.0, 21.1,
-                20.2, 19.4, 18.5, 17.7, 16.8, 16.0, 15.2, 14.4,
-                13.7, 12.9, 12.2, 11.5, 10.8, 10.1, 9.5, 8.9,
-                8.4, 7.8, 7.3, 6.8, 6.4, 6.0, 5.6, 5.2, 4.9, 4.6
-                ]
+    rmdTable = [
+        27.4,
+        26.5,
+        25.5,
+        24.6,
+        23.7,
+        22.9,
+        22.0,
+        21.1,
+        20.2,
+        19.4,
+        18.5,
+        17.7,
+        16.8,
+        16.0,
+        15.2,
+        14.4,
+        13.7,
+        12.9,
+        12.2,
+        11.5,
+        10.8,
+        10.1,
+        9.5,
+        8.9,
+        8.4,
+        7.8,
+        7.3,
+        6.8,
+        6.4,
+        6.0,
+        5.6,
+        5.2,
+        4.9,
+        4.6,
+    ]
 
     yage = year - yob
     # Account for increase of RMD age between 2023 and 2032.
-    if (year > 2032 and yage < 75) or (year > 2023 and yage < 73) \
-            or (yage < 72):
+    if (year > 2032 and yage < 75) or (year > 2023 and yage < 73) or (yage < 72):
         return 0
 
-    return 1./rmdTable[yage-72]
+    return 1.0 / rmdTable[yage - 72]
 
 
 # TCJA rates
 # Married filing jointly. Keys are 'up to' while values are tax rates.
-tax2024_MFJ = {23200: 0.10,
-               94300: 0.12,
-               201050: 0.22,
-               383900: 0.24,
-               487450: 0.32,
-               731200: 0.35,
-               99999999: 0.37
-               }
+tax2024_MFJ = {
+    23200: 0.10,
+    94300: 0.12,
+    201050: 0.22,
+    383900: 0.24,
+    487450: 0.32,
+    731200: 0.35,
+    99999999: 0.37,
+}
 
 # Single
-tax2024_S = {11600: 0.10,
-             47150: 0.12,
-             100525: 0.22,
-             191950: 0.24,
-             243725: 0.32,
-             609350: 0.35,
-             99999999: 0.37
-             }
+tax2024_S = {
+    11600: 0.10,
+    47150: 0.12,
+    100525: 0.22,
+    191950: 0.24,
+    243725: 0.32,
+    609350: 0.35,
+    99999999: 0.37,
+}
 
 '''
 # Original 2017 rates
@@ -185,24 +227,26 @@ tax2017_S = {9325: 0.10,
 
 # 2017 rates inflation-adjusted to 2024 (+30.0% increase)
 # Married filing jointly
-tax2017_MFJ = {24200: 0.10,
-               98700: 0.15,
-               199000: 0.25,
-               303350: 0.28,
-               541700: 0.33,
-               611900: 0.35,
-               99999999: 0.396
-               }
+tax2017_MFJ = {
+    24200: 0.10,
+    98700: 0.15,
+    199000: 0.25,
+    303350: 0.28,
+    541700: 0.33,
+    611900: 0.35,
+    99999999: 0.396,
+}
 
 # Single
-tax2017_S = {12100: 0.10,
-             49300: 0.15,
-             119500: 0.25,
-             249100: 0.28,
-             541700: 0.33,
-             543900: 0.35,
-             99999999: 0.396
-             }
+tax2017_S = {
+    12100: 0.10,
+    49300: 0.15,
+    119500: 0.25,
+    249100: 0.28,
+    541700: 0.33,
+    543900: 0.35,
+    99999999: 0.396,
+}
 
 
 def taxBrackets(status, horizons, rates):
@@ -286,12 +330,11 @@ def calcTax(income, year, rates, taxTable):
     for bracket, txrate in taxTable.items():
         nowBracket = inflationAdjusted(bracket, year, rates)
         if income > nowBracket:
-            tax += (nowBracket - prevBracket)*txrate
+            tax += (nowBracket - prevBracket) * txrate
         else:
-            tax += (income - prevBracket)*txrate
+            tax += (income - prevBracket) * txrate
             return tax
 
         prevBracket = nowBracket
 
     u.xprint('Logic error in calcTax! Income: $', income)
-

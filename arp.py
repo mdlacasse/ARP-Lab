@@ -48,10 +48,10 @@ class Plan:
 
         # Check validity of inputs.
         self.count = len(YOB)
-        assert (self.count == len(expectancy))
-        assert (0 < self.count and self.count <= 2)
+        assert self.count == len(expectancy)
+        assert 0 < self.count and self.count <= 2
 
-        self.status = ['single', 'married'][self.count-1]
+        self.status = ['single', 'married'][self.count - 1]
 
         self.yob = YOB
         self.expectancy = expectancy
@@ -61,27 +61,36 @@ class Plan:
         # Add one to account for inclusive bounds.
         # We assume that individual lives until the end of the year during
         # which she/he reached the age of life expectancy.
-        self.horizons = [YOB[i] + expectancy[i] - now + 1
-                         for i in range(self.count)]
+        self.horizons = [YOB[i] + expectancy[i] - now + 1 for i in range(self.count)]
         # Add one more year as we are computing balances for next year and
         # the beginning of last year will contain estate value.
         self.span = max(self.horizons) + 1
 
-        u.vprint('Preparing scenario of', self.span - 1, 'years',
-                 'for', self.count, 'individual'+['', 's'][self.count-1])
+        u.vprint(
+            'Preparing scenario of',
+            self.span - 1,
+            'years',
+            'for',
+            self.count,
+            'individual' + ['', 's'][self.count - 1],
+        )
 
         # Variables starting with a 'y' are tracking yearly values.
         # Initialize variables that track values year after year:
-        self.yyear = np.array(range(now, now+self.span))
+        self.yyear = np.array(range(now, now + self.span))
 
         if self.count == 1:
             age = _age(YOB[0])
             self.y2ages = np.zeros((self.count, self.span), dtype=int)
-            self.y2ages[0][:] = range(age, age+self.span)
+            self.y2ages[0][:] = range(age, age + self.span)
         elif self.count == 2:
             ages = np.array([_age(YOB[0]), _age(YOB[1])])
-            self.y2ages = np.array([range(ages[0], ages[0]+self.span),
-                                   range(ages[1], ages[1]+self.span)])
+            self.y2ages = np.array(
+                [
+                    range(ages[0], ages[0] + self.span),
+                    range(ages[1], ages[1] + self.span),
+                ]
+            )
 
         self.y2ages = self.y2ages.transpose()
 
@@ -129,21 +138,21 @@ class Plan:
         self.y2assetRatios = {}
         self.boundsAR = {}
         for aType in ['taxable', 'tax-deferred', 'tax-free', 'coordinated']:
-            self.y2assetRatios[aType] = \
-                    np.zeros((self.span, self.count, 4))
+            self.y2assetRatios[aType] = np.zeros((self.span, self.count, 4))
             self.boundsAR[aType] = np.zeros((2, self.count, 4))
 
         # Set default values on bounds. k is initial(0) and final(1).
         u.vprint('Using default values for assets allocation ratios.')
         for k in [0, 1]:
             if self.count == 1:
-                self._setAR([[0, 25, 50, 25]],
-                            [[60, 40, 0, 0]],
-                            [[60, 40, 0, 0]], k)
+                self._setAR([[0, 25, 50, 25]], [[60, 40, 0, 0]], [[60, 40, 0, 0]], k)
             else:
-                self._setAR([[0, 25, 50, 25], [0, 25, 50, 25]],
-                            [[60, 40, 0, 0], [60, 40, 0, 0]],
-                            [[60, 40, 0, 0], [60, 40, 0, 0]], k)
+                self._setAR(
+                    [[0, 25, 50, 25], [0, 25, 50, 25]],
+                    [[60, 40, 0, 0], [60, 40, 0, 0]],
+                    [[60, 40, 0, 0], [60, 40, 0, 0]],
+                    k,
+                )
 
         self.interpolateAR()
 
@@ -182,7 +191,7 @@ class Plan:
         '''
         Set fraction of income desired for survivor spouse.
         '''
-        assert (0 <= fraction and fraction <= 1.)
+        assert 0 <= fraction and fraction <= 1.0
         u.vprint('Survivor spouse income fraction set to', fraction)
         self.survivorFraction = fraction
 
@@ -192,10 +201,11 @@ class Plan:
         '''
         Set the heirs tax rate on the tax-deferred portion of the estate.
         '''
-        assert (0 <= rate and rate <= 100)
+        assert 0 <= rate and rate <= 100
         rate /= 100
-        u.vprint('Heirs tax rate on tax-deferred portion of estate set to',
-                 pc(rate, f=0))
+        u.vprint(
+            'Heirs tax rate on tax-deferred portion of estate set to', pc(rate, f=0)
+        )
         self.heirsTxRate = rate
 
         return
@@ -240,11 +250,18 @@ class Plan:
 
         which = ['Initial', 'Final'][k]
 
-        u.vprint(which, 'assets allocation ratios set to: (%)\n', taxable,
-                 '\n', taxDeferred, '\n', taxFree)
-        self.boundsAR['taxable'][k] = np.array(taxable)/100
-        self.boundsAR['tax-deferred'][k] = np.array(taxDeferred)/100
-        self.boundsAR['tax-free'][k] = np.array(taxFree)/100
+        u.vprint(
+            which,
+            'assets allocation ratios set to: (%)\n',
+            taxable,
+            '\n',
+            taxDeferred,
+            '\n',
+            taxFree,
+        )
+        self.boundsAR['taxable'][k] = np.array(taxable) / 100
+        self.boundsAR['tax-deferred'][k] = np.array(taxDeferred) / 100
+        self.boundsAR['tax-free'][k] = np.array(taxFree) / 100
         self.coordinatedAR = 'none'
 
         return
@@ -264,8 +281,8 @@ class Plan:
                 assert abs(sum(initial[i]) - 100) < 0.01
                 assert abs(sum(final[i]) - 100) < 0.01
 
-            self.boundsAR['coordinated'][0] = np.array(initial)/100
-            self.boundsAR['coordinated'][1] = np.array(final)/100
+            self.boundsAR['coordinated'][0] = np.array(initial) / 100
+            self.boundsAR['coordinated'][1] = np.array(final) / 100
         elif len(initial) == 4:
             scope = 'both'
             assert len(final) == 4
@@ -273,14 +290,21 @@ class Plan:
             assert abs(sum(final) - 100) < 0.01
 
             for i in range(self.count):
-                self.boundsAR['coordinated'][0][i] = np.array(initial)/100
-                self.boundsAR['coordinated'][1][i] = np.array(final)/100
+                self.boundsAR['coordinated'][0][i] = np.array(initial) / 100
+                self.boundsAR['coordinated'][1][i] = np.array(final) / 100
         else:
             u.xprint('Lists provided have wrong length:', len(initial))
 
         self.coordinatedAR = scope
-        u.vprint('Coordinating', scope, 'assets allocation ratios (%):\n',
-                 'initial:', initial, '\n   final:', final)
+        u.vprint(
+            'Coordinating',
+            scope,
+            'assets allocation ratios (%):\n',
+            'initial:',
+            initial,
+            '\n   final:',
+            final,
+        )
 
         return
 
@@ -294,8 +318,7 @@ class Plan:
         Hyperbolic tangent give a smooth "S" curve centered at point "c"
         with a width "w". Center point defaults to 15 years and width to
         5 years. This means that the transition from initial to final
-        will start occuring in 10 years (15-5) and will end in 20 years
-        (15+5).
+        will start occuring in 10 years (15-5) and will end in 20 years (15+5).
         '''
         if method not in ['linear', 's-curve', 'none']:
             u.xprint('Method', method, 'not supported.')
@@ -303,31 +326,27 @@ class Plan:
         if self.coordinatedAR == 'both':
             accType = 'coordinated'
             # Use longest-lived spouse for both time scales.
-            maxhorizons = np.ones(self.count, dtype=int)*max(self.horizons)
+            maxhorizons = np.ones(self.count, dtype=int) * max(self.horizons)
             if method == 'linear':
                 self._linInterp(accType, 1, maxhorizons)
             elif method == 's-curve':
-                self._tanhInterp(accType, 1, maxhorizons,
-                                 center, width)
+                self._tanhInterp(accType, 1, maxhorizons, center, width)
         elif self.coordinatedAR == 'individual':
             accType = 'coordinated'
             if method == 'linear':
                 self._linInterp(accType, self.count, self.horizons)
             elif method == 's-curve':
-                self._tanhInterp(accType, self.count, self.horizons,
-                                 center, width)
+                self._tanhInterp(accType, self.count, self.horizons, center, width)
         elif self.coordinatedAR == 'none':
             for accType in ['taxable', 'tax-deferred', 'tax-free']:
                 if method == 'linear':
                     self._linInterp(accType, self.count, self.horizons)
                 elif method == 's-curve':
-                    self._tanhInterp(accType, self.count, self.horizons,
-                                     center, width)
+                    self._tanhInterp(accType, self.count, self.horizons, center, width)
         else:
             u.xprint('Unknown coordination:', self.coordinatedAR)
 
-        u.vprint('Interpolated assets allocation ratios using',
-                 method, 'method.')
+        u.vprint('Interpolated assets allocation ratios using', method, 'method.')
 
         return
 
@@ -339,12 +358,14 @@ class Plan:
         '''
         for who in range(count):
             for j in range(4):
-                dat = np.linspace(self.boundsAR[accType][0][who][j],
-                                  self.boundsAR[accType][1][who][j],
-                                  numPoints[who]+1)
-                for n in range(numPoints[who]+1):
+                dat = np.linspace(
+                    self.boundsAR[accType][0][who][j],
+                    self.boundsAR[accType][1][who][j],
+                    numPoints[who] + 1,
+                )
+                for n in range(numPoints[who] + 1):
                     self.y2assetRatios[accType][n][who][j] = dat[n]
-                for n in range(numPoints[who]+1, self.span):
+                for n in range(numPoints[who] + 1, self.span):
                     self.y2assetRatios[accType][n][who][j] = 0
 
         return
@@ -357,13 +378,13 @@ class Plan:
         '''
         for who in range(count):
             for j in range(4):
-                t = np.linspace(0, numPoints[who], numPoints[who]+1)
+                t = np.linspace(0, numPoints[who], numPoints[who] + 1)
                 a = self.boundsAR[accType][0][who][j]
                 b = self.boundsAR[accType][1][who][j]
-                dat = a + 0.5 * (b-a) * (1 + np.tanh((t-c)/w))
-                for n in range(numPoints[who]+1):
+                dat = a + 0.5 * (b - a) * (1 + np.tanh((t - c) / w))
+                for n in range(numPoints[who] + 1):
                     self.y2assetRatios[accType][n][who][j] = dat[n]
-                for n in range(numPoints[who]+1, self.span):
+                for n in range(numPoints[who] + 1, self.span):
                     self.y2assetRatios[accType][n][who][j] = 0
 
         return
@@ -383,13 +404,19 @@ class Plan:
                 Y = self.y2accounts['tax-deferred'][n][who]
                 Z = self.y2accounts['tax-free'][n][who]
 
-                x, y, z, = _balance(c, X, Y, Z)
-                T = (X + Y + Z + 0.01)
-                u.vprint('Global assets allocation:',
-                         pc((X*x[0] + Y*y[0] + Z*z[0])/T),
-                         pc((X*x[1] + Y*y[1] + Z*z[1])/T),
-                         pc((X*x[2] + Y*y[2] + Z*z[2])/T),
-                         pc((X*x[3] + Y*y[3] + Z*z[3])/T))
+                (
+                    x,
+                    y,
+                    z,
+                ) = _balance(c, X, Y, Z)
+                T = X + Y + Z + 0.01
+                u.vprint(
+                    'Global assets allocation:',
+                    pc((X * x[0] + Y * y[0] + Z * z[0]) / T),
+                    pc((X * x[1] + Y * y[1] + Z * z[1]) / T),
+                    pc((X * x[2] + Y * y[2] + Z * z[2]) / T),
+                    pc((X * x[3] + Y * y[3] + Z * z[3]) / T),
+                )
 
                 self.y2assetRatios['taxable'][n][who] = x
                 self.y2assetRatios['tax-deferred'][n][who] = y
@@ -401,13 +428,15 @@ class Plan:
             Z = sum(self.y2accounts['tax-free'][n])
 
             x, y, z = _balance(c, X, Y, Z)
-            T = (X + Y + Z + 0.01)
+            T = X + Y + Z + 0.01
             # print('both AR:', x, y, z)
-            u.vprint('Global assets allocation:',
-                     pc((X*x[0] + Y*y[0] + Z*z[0])/T),
-                     pc((X*x[1] + Y*y[1] + Z*z[1])/T),
-                     pc((X*x[2] + Y*y[2] + Z*z[2])/T),
-                     pc((X*x[3] + Y*y[3] + Z*z[3])/T))
+            u.vprint(
+                'Global assets allocation:',
+                pc((X * x[0] + Y * y[0] + Z * z[0]) / T),
+                pc((X * x[1] + Y * y[1] + Z * z[1]) / T),
+                pc((X * x[2] + Y * y[2] + Z * z[2]) / T),
+                pc((X * x[3] + Y * y[3] + Z * z[3]) / T),
+            )
 
             for who in range(self.count):
                 self.y2assetRatios['taxable'][n][who] = x
@@ -452,10 +481,10 @@ class Plan:
         these lists will contain only one entry and the beneficiary
         value is not relevant.
         '''
-        assert (len(taxable) == self.count)
-        assert (len(taxDeferred) == self.count)
-        assert (len(taxFree) == self.count)
-        assert (len(beneficiary) == self.count)
+        assert len(taxable) == self.count
+        assert len(taxDeferred) == self.count
+        assert len(taxFree) == self.count
+        assert len(beneficiary) == self.count
 
         self.n2balances['taxable'][:] = taxable
         self.n2balances['tax-deferred'][:] = taxDeferred
@@ -498,9 +527,9 @@ class Plan:
         self._testAssetRatios(self, taxableR, taxDeferredR, taxFreeR)
 
         # Convert from percent to decimal.
-        self.taxableR[0] = np.array(taxableR)/100
-        self.taxDeferredR[0] = np.array(taxDeferredR)/100
-        self.taxFreeR[0] = np.array(taxFreeR)/100
+        self.taxableR[0] = np.array(taxableR) / 100
+        self.taxDeferredR[0] = np.array(taxDeferredR) / 100
+        self.taxFreeR[0] = np.array(taxFreeR) / 100
 
         return
 
@@ -513,12 +542,16 @@ class Plan:
         assert len(taxFreeR) == self.count
 
         for i in range(self.count):
-            assert len(taxableR[i]) == 3 and \
-                   len(taxDeferredR[i]) == 3 and \
-                   len(taxFreeR[i]) == 3
-            assert (abs(sum(taxableR[i]) - 100) < 0.0000001 and
-                    abs(sum(taxDeferredR[i]) - 100) < 0.0000001 and
-                    abs(sum(taxFreeR[i]) - 100) < 0.0000001)
+            assert (
+                len(taxableR[i]) == 3
+                and len(taxDeferredR[i]) == 3
+                and len(taxFreeR[i]) == 3
+            )
+            assert (
+                abs(sum(taxableR[i]) - 100) < 0.0000001
+                and abs(sum(taxDeferredR[i]) - 100) < 0.0000001
+                and abs(sum(taxFreeR[i]) - 100) < 0.0000001
+            )
 
         return
 
@@ -555,7 +588,7 @@ class Plan:
         '''
         if split != 'auto':
             split = float(split)
-            assert (0 <= split and split <= 1)
+            assert 0 <= split and split <= 1
 
         self.split = split
         u.vprint('Using spousal split of', split)
@@ -575,15 +608,19 @@ class Plan:
             s2 = np.sum(self.y2accounts['tax-deferred'][n][:])
             amount = abs(amount)
             if amount <= s1:
-                autoSplit = (self.y2accounts['taxable'][n][0]) / (s1+1)
+                autoSplit = (self.y2accounts['taxable'][n][0]) / (s1 + 1)
             elif amount <= s2:
-                autoSplit = (self.y2accounts['taxable'][n][0] +
-                             self.y2accounts['tax-deferred'][n][0]) / (s1+s2+1)
+                autoSplit = (
+                    self.y2accounts['taxable'][n][0]
+                    + self.y2accounts['tax-deferred'][n][0]
+                ) / (s1 + s2 + 1)
             else:
                 s3 = np.sum(self.y2accounts['tax-free'][n][:])
-                autoSplit = (self.y2accounts['taxable'][n][0] +
-                             self.y2accounts['tax-deferred'][n][0] +
-                             self.y2accounts['tax-free'][n][0]) / (s1+s2+s3+1)
+                autoSplit = (
+                    self.y2accounts['taxable'][n][0]
+                    + self.y2accounts['tax-deferred'][n][0]
+                    + self.y2accounts['tax-free'][n][0]
+                ) / (s1 + s2 + s3 + 1)
 
             return autoSplit
         else:
@@ -600,8 +637,7 @@ class Plan:
         else:
             u.xprint('Unknown profile keyword: ', profile)
 
-        u.vprint('Using desired net income of', d(income),
-                 'with a', profile, 'profile')
+        u.vprint('Using desired net income of', d(income), 'with a', profile, 'profile')
 
         return
 
@@ -628,7 +664,7 @@ class Plan:
         if self.y2ages[n][i] >= refAge:
             return self.pensionAmount[i]
 
-        return 0.
+        return 0.0
 
     def setSocialSecurity(self, amounts, ages):
         '''
@@ -656,8 +692,7 @@ class Plan:
         refIndex = self.yob[who] + self.ssecAge[who] - now
 
         # Inflation is computed from benefit start year.
-        return tx.inflationAdjusted(self.ssecAmount[who], n,
-                                    self.rates, refIndex)
+        return tx.inflationAdjusted(self.ssecAmount[who], n, self.rates, refIndex)
 
     def _transferWealth(self, year, late):
         '''
@@ -665,13 +700,18 @@ class Plan:
         Spouses can inherit IRA and Roth and treat them as their own.
         '''
         xfer = self.beneficiary
-        other = (late+1) % 2
-        u.vprint('Transfering', xfer[late],
-                 'fraction of %s\'s' % self.names[late],
-                 'wealth to', self.names[other])
+        other = (late + 1) % 2
+        u.vprint(
+            'Transfering',
+            xfer[late],
+            'fraction of %s\'s' % self.names[late],
+            'wealth to',
+            self.names[other],
+        )
         for key in self.y2accounts.keys():
-            self.y2accounts[key][year][other] += \
-                    self.beneficiary[late] * self.y2accounts[key][year][late]
+            self.y2accounts[key][year][other] += (
+                self.beneficiary[late] * self.y2accounts[key][year][late]
+            )
             self.y2accounts[key][year][late] = 0
 
         return
@@ -688,28 +728,42 @@ class Plan:
         totPension = np.zeros((self.count))
         totWages = np.zeros((self.count))
         for n in range(self.span):
-            fac = 1./tx.inflationAdjusted(1., n, self.rates)
-            totTaxes += fac*self.yincome['taxes'][n]
-            totIrmaa += fac*self.yincome['irmaa'][n]
-            totNetIncome += fac*self.yincome['net'][n]
+            fac = 1.0 / tx.inflationAdjusted(1.0, n, self.rates)
+            totTaxes += fac * self.yincome['taxes'][n]
+            totIrmaa += fac * self.yincome['irmaa'][n]
+            totNetIncome += fac * self.yincome['net'][n]
             for who in range(self.count):
-                totSSA[who] += fac*self.y2source['ssec'][n][who]
-                totPension[who] += fac*self.y2source['pension'][n][who]
-                totWages[who] += fac*self.y2source['wages'][n][who]
-                totRothX[who] += fac*self.y2source['RothX'][n][who]
+                totSSA[who] += fac * self.y2source['ssec'][n][who]
+                totPension[who] += fac * self.y2source['pension'][n][who]
+                totWages[who] += fac * self.y2source['wages'][n][who]
+                totRothX[who] += fac * self.y2source['RothX'][n][who]
 
-        print('\nTotals for %r (in today\'s $):\n' % self._name,
-              '\tNet income:', d(totNetIncome), '\n',
-              '\tIncome taxes:', d(totTaxes), '\n',
-              '\tIRMAA:', d(totIrmaa),
-              )
+        print(
+            '\nTotals for %r (in today\'s $):\n' % self._name,
+            '\tNet income:',
+            d(totNetIncome),
+            '\n',
+            '\tIncome taxes:',
+            d(totTaxes),
+            '\n',
+            '\tIRMAA:',
+            d(totIrmaa),
+        )
         for who in range(self.count):
             print(self.names[who])
-            print('\tWages:', d(totWages[who]), '\n',
-                  '\tSocial security:', d(totSSA[who]), '\n',
-                  '\tPension:', d(totPension[who]), '\n',
-                  '\tRoth conversions:', d(totRothX[who]),
-                  )
+            print(
+                '\tWages:',
+                d(totWages[who]),
+                '\n',
+                '\tSocial security:',
+                d(totSSA[who]),
+                '\n',
+                '\tPension:',
+                d(totPension[who]),
+                '\n',
+                '\tRoth conversions:',
+                d(totRothX[who]),
+            )
 
         return
 
@@ -736,17 +790,18 @@ class Plan:
         filingStatus = self.status
 
         # All sources of income.
-        self.y2source = {'rmd': np.zeros((self.span, self.count)),
-                         'ssec': np.zeros((self.span, self.count)),
-                         'pension': np.zeros((self.span, self.count)),
-                         'div': np.zeros((self.span, self.count)),
-                         'wages': np.zeros((self.span, self.count)),
-                         'taxable': np.zeros((self.span, self.count)),
-                         'dist': np.zeros((self.span, self.count)),
-                         'tax-free': np.zeros((self.span, self.count)),
-                         'RothX': np.zeros((self.span, self.count)),
-                         'bti': np.zeros((self.span, self.count))
-                         }
+        self.y2source = {
+            'rmd': np.zeros((self.span, self.count)),
+            'ssec': np.zeros((self.span, self.count)),
+            'pension': np.zeros((self.span, self.count)),
+            'div': np.zeros((self.span, self.count)),
+            'wages': np.zeros((self.span, self.count)),
+            'taxable': np.zeros((self.span, self.count)),
+            'dist': np.zeros((self.span, self.count)),
+            'tax-free': np.zeros((self.span, self.count)),
+            'RothX': np.zeros((self.span, self.count)),
+            'bti': np.zeros((self.span, self.count)),
+        }
 
         # Use shorter names:
         ys2wages = self.y2source['wages']
@@ -763,15 +818,16 @@ class Plan:
         # Beware of names: tax-free income includes
         # distributions from taxable, tax-free account,
         # and part of SS income.
-        self.yincome = {'RothX': np.zeros((self.span)),
-                        'gross': np.zeros((self.span)),
-                        'taxes': np.zeros((self.span)),
-                        'irmaa': np.zeros((self.span)),
-                        'net': np.zeros((self.span)),
-                        'target': np.zeros((self.span)),
-                        'taxable': np.zeros((self.span)),
-                        'tax-free': np.zeros((self.span))
-                        }
+        self.yincome = {
+            'RothX': np.zeros((self.span)),
+            'gross': np.zeros((self.span)),
+            'taxes': np.zeros((self.span)),
+            'irmaa': np.zeros((self.span)),
+            'net': np.zeros((self.span)),
+            'target': np.zeros((self.span)),
+            'taxable': np.zeros((self.span)),
+            'tax-free': np.zeros((self.span)),
+        }
 
         # Shorter names:
         yRothX = self.yincome['RothX']
@@ -794,8 +850,13 @@ class Plan:
         rawTarget = self.target
 
         # For each year ahead:
-        u.vprint('Computing plan %r' % self._name, 'for next', self.span - 2,
-                 'years for', ' and '.join(str(x) for x in self.names))
+        u.vprint(
+            'Computing plan %r' % self._name,
+            'for next',
+            self.span - 2,
+            'years for',
+            ' and '.join(str(x) for x in self.names),
+        )
 
         # Keep track of surviving spouses.
         surviving = self.count
@@ -804,8 +865,11 @@ class Plan:
         depRatio = 1
         # y2accounts have one more value for allowing values[n+1].
         for n in range(self.span - 1):
-            u.vprint('-------', self.yyear[n],
-                     ' -----------------------------------------------')
+            u.vprint(
+                '-------',
+                self.yyear[n],
+                ' -----------------------------------------------',
+            )
 
             # Balance portfolio with desired assets allocations
             # considering account balances.
@@ -827,13 +891,23 @@ class Plan:
                 assert reqRoth >= 0
                 tmp = min(reqRoth, ya2taxDef[n][i])
                 if tmp != reqRoth:
-                    u.vprint('WARNING:',
-                             'Insufficient funds for', d(reqRoth),
-                             'Roth conversion for',
-                             self.names[i], 'in', self.yyear[n])
+                    u.vprint(
+                        'WARNING:',
+                        'Insufficient funds for',
+                        d(reqRoth),
+                        'Roth conversion for',
+                        self.names[i],
+                        'in',
+                        self.yyear[n],
+                    )
                 if tmp > 0:
-                    u.vprint(self.names[i], 'requested Roth conversion:',
-                             d(reqRoth), ' Performed:', d(tmp))
+                    u.vprint(
+                        self.names[i],
+                        'requested Roth conversion:',
+                        d(reqRoth),
+                        ' Performed:',
+                        d(tmp),
+                    )
                     ya2taxDef[n][i] -= tmp
                     ya2taxFree[n][i] += tmp
                     ys2RothX[n][i] = tmp
@@ -851,51 +925,70 @@ class Plan:
                 # Use += to avoid overwriting spousal inheritance.
                 # Else, arrays were initialized to zero.
                 ctrb = self.timeLists[i]['ctrb taxable'][n]
-                growth = (ya2taxable[n][i] + 0.5*ctrb) * \
-                    _pfReturn(self.y2assetRatios['taxable'], self.rates, n, i)
+                growth = (ya2taxable[n][i] + 0.5 * ctrb) * _pfReturn(
+                    self.y2assetRatios['taxable'], self.rates, n, i
+                )
                 ys2div[n][i] = min(0, growth)
-                ya2taxable[n+1][i] += ya2taxable[n][i] + ctrb + growth
+                ya2taxable[n + 1][i] += ya2taxable[n][i] + ctrb + growth
                 ytaxableIncome[n] += min(0, growth)
                 if ctrb > 0 or growth > 0:
-                    u.vprint(self.names[i], 'Taxable account growth:',
-                             d(ya2taxable[n][i]), '->', d(ya2taxable[n+1][i]))
+                    u.vprint(
+                        self.names[i],
+                        'Taxable account growth:',
+                        d(ya2taxable[n][i]),
+                        '->',
+                        d(ya2taxable[n + 1][i]),
+                    )
 
                 # Same for tax-deferred, including RMDs on year-end balance.
-                ctrb = self.timeLists[i]['ctrb 401k'][n] + \
-                    self.timeLists[i]['ctrb IRA'][n]
+                ctrb = (
+                    self.timeLists[i]['ctrb 401k'][n] + self.timeLists[i]['ctrb IRA'][n]
+                )
 
-                growth = (ya2taxDef[n][i] + 0.5*ctrb) * \
-                    _pfReturn(self.y2assetRatios['tax-deferred'],
-                              self.rates, n, i)
+                growth = (ya2taxDef[n][i] + 0.5 * ctrb) * _pfReturn(
+                    self.y2assetRatios['tax-deferred'], self.rates, n, i
+                )
 
-                ya2taxDef[n+1][i] += ya2taxDef[n][i] + ctrb + growth
+                ya2taxDef[n + 1][i] += ya2taxDef[n][i] + ctrb + growth
 
                 if ctrb > 0 or growth > 0:
-                    u.vprint(self.names[i], 'Tax-deferred account growth:',
-                             d(ya2taxDef[n][i]), '->', d(ya2taxDef[n+1][i]))
+                    u.vprint(
+                        self.names[i],
+                        'Tax-deferred account growth:',
+                        d(ya2taxDef[n][i]),
+                        '->',
+                        d(ya2taxDef[n + 1][i]),
+                    )
 
-                rmd = ya2taxDef[n+1][i] * \
-                    tx.rmdFraction(self.yyear[n], self.yob[i])
+                rmd = ya2taxDef[n + 1][i] * tx.rmdFraction(self.yyear[n], self.yob[i])
 
                 if rmd > 0:
                     u.vprint(self.names[i], 'RMD:', d(rmd))
 
-                ya2taxDef[n+1][i] -= rmd
+                ya2taxDef[n + 1][i] -= rmd
                 ys2rmd[n][i] = rmd
                 ytaxableIncome[n] += rmd
 
                 # And contributions to tax-free accounts:
-                ctrb = (self.timeLists[i]['ctrb Roth 401k'][n] +
-                        self.timeLists[i]['ctrb Roth IRA'][n])
+                ctrb = (
+                    self.timeLists[i]['ctrb Roth 401k'][n]
+                    + self.timeLists[i]['ctrb Roth IRA'][n]
+                )
 
-                growth = (ya2taxFree[n][i] + 0.5*ctrb) * \
-                    _pfReturn(self.y2assetRatios['tax-free'], self.rates, n, i)
+                growth = (ya2taxFree[n][i] + 0.5 * ctrb) * _pfReturn(
+                    self.y2assetRatios['tax-free'], self.rates, n, i
+                )
 
-                ya2taxFree[n+1][i] += ya2taxFree[n][i] + ctrb + growth
+                ya2taxFree[n + 1][i] += ya2taxFree[n][i] + ctrb + growth
 
                 if ctrb > 0 or growth > 0:
-                    u.vprint(self.names[i], 'Tax-free account growth:',
-                             d(ya2taxFree[n][i]), '->', d(ya2taxFree[n+1][i]))
+                    u.vprint(
+                        self.names[i],
+                        'Tax-free account growth:',
+                        d(ya2taxFree[n][i]),
+                        '->',
+                        d(ya2taxFree[n + 1][i]),
+                    )
 
                 # Compute fixed income for this year:
                 ys2pension[n][i] = self._computePension(n, i)
@@ -903,8 +996,8 @@ class Plan:
                 ys2ssec[n][i] = self._computeSS(n, i)
                 # Assume our revenues are such that 85% of SS is taxable.
                 # Fix if needs arises.
-                ytaxfreeIncome[n] += 0.15*ys2ssec[n][i]
-                ytaxableIncome[n] += 0.85*ys2ssec[n][i]
+                ytaxfreeIncome[n] += 0.15 * ys2ssec[n][i]
+                ytaxableIncome[n] += 0.85 * ys2ssec[n][i]
 
                 # Big-ticket items can be positive or negative.
                 # They do not contribute to income,
@@ -912,18 +1005,26 @@ class Plan:
                 # Take it from the account of bearer: use a split of (i+1)%2.
                 bti = self.timeLists[i]['big ticket items'][n]
                 if bti != 0:
-                    u.vprint(self.names[i],
-                             'requested big-ticket item of', d(bti))
-                    amounts, total = _smartBanking(bti, ya2taxable,
-                                                   ya2taxDef, ya2taxFree,
-                                                   n+1, (i+1) % 2,
-                                                   self.names, self.y2ages,
-                                                   True)
+                    u.vprint(self.names[i], 'requested big-ticket item of', d(bti))
+                    amounts, total = _smartBanking(
+                        bti,
+                        ya2taxable,
+                        ya2taxDef,
+                        ya2taxFree,
+                        n + 1,
+                        (i + 1) % 2,
+                        self.names,
+                        self.y2ages,
+                        True,
+                    )
                     if total != abs(bti):
-                        u.vprint('WARNING: Insufficient funds for BTI for',
-                                 self.names[i], 'in', self.yyear[n])
-                        u.vprint('\tRequested:', d(bti),
-                                 'Performed:', d(total))
+                        u.vprint(
+                            'WARNING: Insufficient funds for BTI for',
+                            self.names[i],
+                            'in',
+                            self.yyear[n],
+                        )
+                        u.vprint('\tRequested:', d(bti), 'Performed:', d(total))
                         self.success = False
 
                     # A BTI is not an income unless we created a taxable event
@@ -938,50 +1039,89 @@ class Plan:
 
             # Compute couple's income needs following profile based on
             # oldest spouse's timeline.
-            adjustedTarget = rawTarget * \
-                _spendingAdjustment(np.max(self.y2ages[n][:]),
-                                    self.profile)
-            ytargetIncome[n] = tx.inflationAdjusted(adjustedTarget,
-                                                    n, self.rates)
+            adjustedTarget = rawTarget * _spendingAdjustment(
+                np.max(self.y2ages[n][:]), self.profile
+            )
+            ytargetIncome[n] = tx.inflationAdjusted(adjustedTarget, n, self.rates)
 
             gross = ytaxableIncome[n] + yRothX[n] + btiEvent
-            estimatedTax = tx.incomeTax(gross, self.yob, filingStatus,
-                                        self.yyear[n], self.rates)
+            estimatedTax = tx.incomeTax(
+                gross, self.yob, filingStatus, self.yyear[n], self.rates
+            )
             netInc = ytaxfreeIncome[n] + ytaxableIncome[n] - estimatedTax
             gap = netInc - ytargetIncome[n]
-            u.vprint('Net income target:', d(ytargetIncome[n]),
-                     ' Unadj. net:', d(netInc), ' Delta:', d(gap))
-            u.vprint('Taxable:', d(ytaxableIncome[n]),
-                     ' Gross:', d(gross), ' Est. Taxes:', d(estimatedTax))
+            u.vprint(
+                'Net income target:',
+                d(ytargetIncome[n]),
+                ' Unadj. net:',
+                d(netInc),
+                ' Delta:',
+                d(gap),
+            )
+            u.vprint(
+                'Taxable:',
+                d(ytaxableIncome[n]),
+                ' Gross:',
+                d(gross),
+                ' Est. Taxes:',
+                d(estimatedTax),
+            )
 
             if gap >= 0:
                 if surviving == 2:
                     # Deposit surplus following this year's income ratio.
-                    depRatio = (ys2wages[n][0] + ys2ssec[n][0] +
-                                ys2pension[n][0] + ys2rmd[n][0]) / \
-                               (sum(ys2wages[n][:] + ys2pension[n][:] +
-                                ys2ssec[n][:] + ys2rmd[n][:]) + 1)
+                    depRatio = (
+                        ys2wages[n][0] + ys2ssec[n][0] + ys2pension[n][0] + ys2rmd[n][0]
+                    ) / (
+                        sum(
+                            ys2wages[n][:]
+                            + ys2pension[n][:]
+                            + ys2ssec[n][:]
+                            + ys2rmd[n][:]
+                        )
+                        + 1
+                    )
 
-                u.vprint('Depositing', d(gap),
-                         'in taxable accounts with ratio',
-                         '{:.2f}'.format(depRatio))
-                _smartBanking(gap, ya2taxable, ya2taxDef, ya2taxFree, n+1,
-                              depRatio, self.names, self.y2ages, True)
+                u.vprint(
+                    'Depositing',
+                    d(gap),
+                    'in taxable accounts with ratio',
+                    '{:.2f}'.format(depRatio),
+                )
+                _smartBanking(
+                    gap,
+                    ya2taxable,
+                    ya2taxDef,
+                    ya2taxFree,
+                    n + 1,
+                    depRatio,
+                    self.names,
+                    self.y2ages,
+                    True,
+                )
                 yincomeTax[n] = estimatedTax
                 ygrossIncome[n] = gross
                 # Medicare IRMAA looks back 2 years.
-                irmaaIncome = ygrossIncome[max(0, n-2)]
+                irmaaIncome = ygrossIncome[max(0, n - 2)]
                 for i in range(self.count):
                     if self.y2ages[n][i] >= 65 and n <= self.horizons[i]:
-                        yirmaa[n] += tx.irmaa(irmaaIncome, filingStatus,
-                                              self.yyear[n], self.rates)
+                        yirmaa[n] += tx.irmaa(
+                            irmaaIncome, filingStatus, self.yyear[n], self.rates
+                        )
 
                 ynetIncome[n] = netInc
-                u.vprint('Adj. Income:\n Gross taxable:', d(ygrossIncome[n]),
-                         'Tax bill:', d(yincomeTax[n]),
-                         'IRMAA:', d(yirmaa[n]),
-                         '\n Net:', d(ynetIncome[n]),
-                         'Tax free:', d(ytaxfreeIncome[n]))
+                u.vprint(
+                    'Adj. Income:\n Gross taxable:',
+                    d(ygrossIncome[n]),
+                    'Tax bill:',
+                    d(yincomeTax[n]),
+                    'IRMAA:',
+                    d(yirmaa[n]),
+                    '\n Net:',
+                    d(ynetIncome[n]),
+                    'Tax free:',
+                    d(ytaxfreeIncome[n]),
+                )
             else:
                 # Solve amount to withdraw self-consistently.
                 # Try at most thirty two times.
@@ -991,39 +1131,48 @@ class Plan:
                 withdrawal = gap
                 # Adjust withdrawal ratio every year,
                 # monitoring surviving spouses.
-                wdrlRatio = self._getSplit(wdrlRatio, withdrawal,
-                                           n+1, surviving)
+                wdrlRatio = self._getSplit(wdrlRatio, withdrawal, n + 1, surviving)
 
                 for k in range(32):
-                    amounts, total = _smartBanking(withdrawal, ya2taxable,
-                                                   ya2taxDef, ya2taxFree,
-                                                   n+1, wdrlRatio,
-                                                   self.names, self.y2ages,
-                                                   False)
+                    amounts, total = _smartBanking(
+                        withdrawal,
+                        ya2taxable,
+                        ya2taxDef,
+                        ya2taxFree,
+                        n + 1,
+                        wdrlRatio,
+                        self.names,
+                        self.y2ages,
+                        False,
+                    )
 
                     # Zeroth component of amounts countains total.
                     txfree = amounts['taxable'][0] + amounts['tax-free'][0]
                     txbl = amounts['tax-def'][0]
-                    totaxblIncome = yRothX[n] + ytaxableIncome[n] + \
-                        btiEvent + txbl
-                    estimatedTax = tx.incomeTax(totaxblIncome, self.yob,
-                                                filingStatus, self.yyear[n],
-                                                self.rates)
+                    totaxblIncome = yRothX[n] + ytaxableIncome[n] + btiEvent + txbl
+                    estimatedTax = tx.incomeTax(
+                        totaxblIncome, self.yob, filingStatus, self.yyear[n], self.rates
+                    )
 
-                    netInc = (txfree + txbl + ytaxfreeIncome[n] +
-                              ytaxableIncome[n] - estimatedTax)
+                    netInc = (
+                        txfree
+                        + txbl
+                        + ytaxfreeIncome[n]
+                        + ytaxableIncome[n]
+                        - estimatedTax
+                    )
 
                     # No point to loop if we are running out of money.
                     if abs(total - abs(withdrawal)) > 1:
-                        print('WARNING: Running out of money in year',
-                              self.yyear[n])
+                        print('WARNING: Running out of money in year', self.yyear[n])
                         self.success = False
                         break
 
                     delta = netInc - ytargetIncome[n]
                     if delta >= -1:
-                        u.vprint('Solved with', k, 'iteration(s) and delta of',
-                                 d(delta, 2))
+                        u.vprint(
+                            'Solved with', k, 'iteration(s) and delta of', d(delta, 2)
+                        )
                         break
 
                     withdrawal += delta
@@ -1031,14 +1180,24 @@ class Plan:
                     u.xprint('Could not converge on withdrawal.')
 
                 # Now commit withdrawal and pay taxes.
-                amounts, total = _smartBanking(withdrawal, ya2taxable,
-                                               ya2taxDef, ya2taxFree,
-                                               n+1, wdrlRatio,
-                                               self.names, self.y2ages,
-                                               True)
+                amounts, total = _smartBanking(
+                    withdrawal,
+                    ya2taxable,
+                    ya2taxDef,
+                    ya2taxFree,
+                    n + 1,
+                    wdrlRatio,
+                    self.names,
+                    self.y2ages,
+                    True,
+                )
 
-                u.vprint('Performed withdrawal of', d(total),
-                         'using split of', '{:.2f}'.format(wdrlRatio))
+                u.vprint(
+                    'Performed withdrawal of',
+                    d(total),
+                    'using split of',
+                    '{:.2f}'.format(wdrlRatio),
+                )
 
                 txfree = amounts['taxable'][0] + amounts['tax-free'][0]
                 txbl = amounts['tax-def'][0]
@@ -1048,20 +1207,26 @@ class Plan:
                 ys2txbl[n][:] += amounts['taxable'][1:]
                 ytaxfreeIncome[n] += txfree
                 yincomeTax[n] = estimatedTax
-                ynetIncome[n] = (ytaxfreeIncome[n] +
-                                 ytaxableIncome[n] -
-                                 yincomeTax[n])
+                ynetIncome[n] = ytaxfreeIncome[n] + ytaxableIncome[n] - yincomeTax[n]
                 ygrossIncome[n] = ytaxableIncome[n] + yRothX[n] + btiEvent
                 # IRMAA looks back 2 years for income.
-                irmaaIncome = ygrossIncome[max(0, n-2)]
-                yirmaa[n] = tx.irmaa(irmaaIncome, filingStatus,
-                                     self.yyear[n], self.rates)
+                irmaaIncome = ygrossIncome[max(0, n - 2)]
+                yirmaa[n] = tx.irmaa(
+                    irmaaIncome, filingStatus, self.yyear[n], self.rates
+                )
                 u.vprint('\t...of which', d(txbl), 'is taxable.')
-                u.vprint('Adj. Income:\n Gross taxable:', d(ygrossIncome[n]),
-                         'Tax bill:', d(yincomeTax[n]),
-                         'IRMAA:', d(yirmaa[n]),
-                         '\n Net:', d(ynetIncome[n]),
-                         'Tax free:', d(ytaxfreeIncome[n]))
+                u.vprint(
+                    'Adj. Income:\n Gross taxable:',
+                    d(ygrossIncome[n]),
+                    'Tax bill:',
+                    d(yincomeTax[n]),
+                    'IRMAA:',
+                    d(yirmaa[n]),
+                    '\n Net:',
+                    d(ynetIncome[n]),
+                    'Tax free:',
+                    d(ytaxfreeIncome[n]),
+                )
 
             # Now check if anyone passed? Then transfer wealth at year-end.
             for j in range(self.count):
@@ -1075,16 +1240,18 @@ class Plan:
                             u.setVerbose(prevState)
                         return
 
-                    self._transferWealth(n+1, j)
+                    self._transferWealth(n + 1, j)
 
                     # Split becomes binary at death of one spouse.
                     wdrlRatio = j
                     depRatio = j
                     filingStatus = 'single'
                     # Reduce target income.
-                    u.vprint('Reducing net income to',
-                             pc(self.survivorFraction, f=0),
-                             'of original target')
+                    u.vprint(
+                        'Reducing net income to',
+                        pc(self.survivorFraction, f=0),
+                        'of original target',
+                    )
                     rawTarget *= self.survivorFraction
 
             if not self.success:
@@ -1113,22 +1280,23 @@ class Plan:
         for acType in ['taxable', 'tax-deferred', 'tax-free']:
             stackNames = []
             for key in assetDic:
-                name = key+' / '+acType
+                name = key + ' / ' + acType
                 stackNames.append(name)
                 y2stack[name] = np.zeros((self.count, self.span))
                 for i in range(self.count):
-                    y2stack[name][i][:] = \
-                        self.y2accounts[acType].transpose()[i][:] *\
-                        self.y2assetRatios[acType].\
-                        transpose(1, 2, 0)[i][assetDic[key]][:]
+                    y2stack[name][i][:] = (
+                        self.y2accounts[acType].transpose()[i][:]
+                        * self.y2assetRatios[acType].transpose(1, 2, 0)[i][
+                            assetDic[key]
+                        ][:]
+                    )
                 y2stack[name] = y2stack[name].transpose()
 
-            title = self._name + '\nAssets Distribution - '+acType
+            title = self._name + '\nAssets Distribution - ' + acType
             if tag != '':
-                title += ' - '+tag
+                title += ' - ' + tag
 
-            self._stackPlot(title, range(self.count), y2stack,
-                            stackNames, 'upper left')
+            self._stackPlot(title, range(self.count), y2stack, stackNames, 'upper left')
 
         return
 
@@ -1155,26 +1323,26 @@ class Plan:
             for acType in acList:
                 stackNames = []
                 for key in assetDic:
-                    aname = key+' / '+acType
+                    aname = key + ' / ' + acType
                     stackNames.append(aname)
                     y2stack[aname] = np.zeros((count, self.span))
-                    y2stack[aname][i][:] = \
-                        self.y2assetRatios[acType].\
-                        transpose(1, 2, 0)[i][assetDic[key]][:]
+                    y2stack[aname][i][:] = self.y2assetRatios[acType].transpose(
+                        1, 2, 0
+                    )[i][assetDic[key]][:]
                     y2stack[aname] = y2stack[aname].transpose()
 
-                    title = self._name + '\nAssets Allocations (%) - '+acType
+                    title = self._name + '\nAssets Allocations (%) - ' + acType
                     if self.coordinatedAR == 'both':
                         title += ' both'
                     else:
-                        title += ' '+self.names[i]
+                        title += ' ' + self.names[i]
 
                 if tag != '':
-                    title += ' - '+tag
+                    title += ' - ' + tag
 
-                self._stackPlot(title, [i],
-                                y2stack, stackNames,
-                                'upper left', 'percent')
+                self._stackPlot(
+                    title, [i], y2stack, stackNames, 'upper left', 'percent'
+                )
 
         return
 
@@ -1186,11 +1354,10 @@ class Plan:
         '''
         title = self._name + '\nSavings Balance'
         if tag != '':
-            title += ' - '+tag
+            title += ' - ' + tag
         types = ['taxable', 'tax-deferred', 'tax-free']
 
-        self._stackPlot(title, range(self.count),
-                        self.y2accounts, types, 'upper left')
+        self._stackPlot(title, range(self.count), self.y2accounts, types, 'upper left')
 
         return
 
@@ -1202,18 +1369,25 @@ class Plan:
         '''
         title = self._name + '\nRaw Income Sources'
         if tag != '':
-            title += ' - '+tag
+            title += ' - ' + tag
 
-        types = ['wages', 'ssec', 'pension', 'dist', 'rmd', 'RothX',
-                 'div', 'taxable', 'tax-free']
+        types = [
+            'wages',
+            'ssec',
+            'pension',
+            'dist',
+            'rmd',
+            'RothX',
+            'div',
+            'taxable',
+            'tax-free',
+        ]
 
-        self._stackPlot(title, range(self.count), self.y2source,
-                        types, 'upper left')
+        self._stackPlot(title, range(self.count), self.y2source, types, 'upper left')
 
         return
 
-    def _stackPlot(self, title, irange, accounts, types,
-                   location, dtype='dollars'):
+    def _stackPlot(self, title, irange, accounts, types, location, dtype='dollars'):
         '''
         Core function for stacked plots.
         '''
@@ -1225,7 +1399,7 @@ class Plan:
             for i in irange:
                 tmp = accounts[aType].transpose()[i]
                 if sum(tmp) > 0.01:
-                    accountValues[aType+' '+self.names[i]] = tmp
+                    accountValues[aType + ' ' + self.names[i]] = tmp
 
         if len(accountValues) == 0:
             print('Nothing to plot for', title)
@@ -1234,21 +1408,23 @@ class Plan:
         fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
 
-        ax.stackplot(self.yyear, accountValues.values(),
-                     labels=accountValues.keys(), alpha=0.8)
-        ax.legend(loc=location, reverse=True, fontsize=8,
-                  ncol=2, framealpha=0.7)
+        ax.stackplot(
+            self.yyear, accountValues.values(), labels=accountValues.keys(), alpha=0.8
+        )
+        ax.legend(loc=location, reverse=True, fontsize=8, ncol=2, framealpha=0.7)
         # ax.legend(loc=location)
         ax.set_title(title)
         ax.set_xlabel('year')
         if dtype == 'dollars':
             ax.set_ylabel('k$')
             ax.get_yaxis().set_major_formatter(
-                    tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
+                tk.FuncFormatter(lambda x, p: format(int(x / 1000), ','))
+            )
         elif dtype == 'percent':
             ax.set_ylabel('%')
             ax.get_yaxis().set_major_formatter(
-                    tk.FuncFormatter(lambda x, p: format(int(100*x), ',')))
+                tk.FuncFormatter(lambda x, p: format(int(100 * x), ','))
+            )
         else:
             u.xprint('Unknown dtype:', dtype)
 
@@ -1263,7 +1439,7 @@ class Plan:
         '''
         title = self._name + '\nNet Income vs. Target'
         if tag != '':
-            title += ' - '+tag
+            title += ' - ' + tag
 
         style = {'net': '-', 'target': ':'}
         self._lineIncomePlot(style, title)
@@ -1281,17 +1457,16 @@ class Plan:
         plt.grid(visible='both')
 
         for aType in style:
-            ax.plot(self.yyear, self.yincome[aType],
-                    label=aType, ls=style[aType])
+            ax.plot(self.yyear, self.yincome[aType], label=aType, ls=style[aType])
 
-        ax.legend(loc='upper left', reverse=True,
-                  fontsize=8, framealpha=0.7)
+        ax.legend(loc='upper left', reverse=True, fontsize=8, framealpha=0.7)
         # ax.legend(loc='upper left')
         ax.set_title(title)
         ax.set_xlabel('year')
         ax.set_ylabel('k$')
         ax.get_yaxis().set_major_formatter(
-                tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
+            tk.FuncFormatter(lambda x, p: format(int(x / 1000), ','))
+        )
 
         # plt.show()
         return fig, ax
@@ -1306,7 +1481,7 @@ class Plan:
 
         title = self._name + '\nGross Income vs. Tax Brackets'
         if tag != '':
-            title += ' - '+tag
+            title += ' - ' + tag
 
         style = {'gross': '-'}
 
@@ -1325,8 +1500,7 @@ class Plan:
             ax.plot(self.yyear, data[key], label=key, ls=':')
 
         plt.grid(visible='both')
-        ax.legend(loc='upper left', reverse=True,
-                  fontsize=8, framealpha=0.7)
+        ax.legend(loc='upper left', reverse=True, fontsize=8, framealpha=0.7)
         # ax.legend(loc='upper left')
 
         return
@@ -1339,7 +1513,7 @@ class Plan:
         '''
         title = self._name + '\nIncome Tax and IRMAA'
         if tag != '':
-            title += ' - '+tag
+            title += ' - ' + tag
 
         data = {'irmaa': '-', 'taxes': '-'}
 
@@ -1359,28 +1533,29 @@ class Plan:
 
         fig, ax = plt.subplots(figsize=(6, 4))
         plt.grid(visible='both')
-        title = (self._name + '\nReturn & Inflation Rates ('
-                 + str(self.rateMethod))
+        title = self._name + '\nReturn & Inflation Rates (' + str(self.rateMethod)
         if self.rateMethod in ['historical', 'stochastic', 'average']:
-            title += ' '+str(self.rateFrm)+'-'+str(self.rateTo)
+            title += ' ' + str(self.rateFrm) + '-' + str(self.rateTo)
         elif self.rateMethod == 'fixed':
             title += str(self.rateMethod)
         title += ')'
 
         if tag != '':
-            title += ' - '+tag
+            title += ' - ' + tag
 
-        rateName = ['S&P500 including dividends', 'Baa Corporate bonds',
-                    '10-y Treasury bonds', 'Inflation']
+        rateName = [
+            'S&P500 including dividends',
+            'Baa Corporate bonds',
+            '10-y Treasury bonds',
+            'Inflation',
+        ]
         ltype = ['-', '-.', ':', '--']
         for i in range(4):
-            data = 100*self.rates.transpose()[i]
-            label = rateName[i] + ' <' + \
-                '{:.2f}'.format(np.mean(data)) + '>'
+            data = 100 * self.rates.transpose()[i]
+            label = rateName[i] + ' <' + '{:.2f}'.format(np.mean(data)) + '>'
             ax.plot(self.yyear, data, label=label, ls=ltype[i % 4])
 
-        ax.legend(loc='upper left', reverse=False,
-                  fontsize=8, framealpha=0.7)
+        ax.legend(loc='upper left', reverse=False, fontsize=8, framealpha=0.7)
         # ax.legend(loc='upper left')
         ax.set_title(title)
         ax.set_xlabel('year')
@@ -1444,13 +1619,14 @@ class Plan:
 
         rawData = {}
         rawData['year'] = self.yyear[:-1]
-        incDic = {'target income': 'target',
-                  'net income': 'net',
-                  'taxable income': 'taxable',
-                  'gross income': 'gross',
-                  'tax bill': 'taxes',
-                  'IRMAA bill': 'irmaa'
-                  }
+        incDic = {
+            'target income': 'target',
+            'net income': 'net',
+            'taxable income': 'taxable',
+            'gross income': 'gross',
+            'tax bill': 'taxes',
+            'IRMAA bill': 'irmaa',
+        }
         for key in incDic:
             rawData[key] = self.yincome[incDic[key]][:-1]
 
@@ -1465,9 +1641,7 @@ class Plan:
         ws = wb.create_sheet('Rates')
         rawData = {}
         rawData['year'] = self.yyear[:-1]
-        ratesDic = {'S&P 500': 0, 'Corporate Baa': 1,
-                    'T Bonds': 2, 'inflation': 3
-                    }
+        ratesDic = {'S&P 500': 0, 'Corporate Baa': 1, 'T Bonds': 2, 'inflation': 3}
 
         for key in ratesDic:
             rawData[key] = self.rates.transpose()[ratesDic[key]][:-1]
@@ -1480,13 +1654,14 @@ class Plan:
         _formatSpreadsheet(ws, 'percent2')
 
         # Save sources.
-        srcDic = {'txbl acc. wdrwl': 'taxable',
-                  'RMD': 'rmd',
-                  'distribution': 'dist',
-                  'Roth conversion': 'RothX',
-                  'tax-free wdrwl': 'tax-free',
-                  'big-ticket items': 'bti'
-                  }
+        srcDic = {
+            'txbl acc. wdrwl': 'taxable',
+            'RMD': 'rmd',
+            'distribution': 'dist',
+            'Roth conversion': 'RothX',
+            'tax-free wdrwl': 'tax-free',
+            'big-ticket items': 'bti',
+        }
 
         for i in range(self.count):
             sname = self.names[i] + '\'s Sources'
@@ -1494,8 +1669,9 @@ class Plan:
             rawData = {}
             rawData['year'] = self.yyear[:-1]
             for key in srcDic:
-                rawData[self.names[i]+' '+key] = \
-                    self.y2source[srcDic[key]].transpose()[i][:-1]
+                rawData[self.names[i] + ' ' + key] = self.y2source[
+                    srcDic[key]
+                ].transpose()[i][:-1]
 
             df = pd.DataFrame(rawData)
             for rows in dataframe_to_rows(df, index=False, header=True):
@@ -1510,8 +1686,9 @@ class Plan:
             rawData = {}
             rawData['year'] = self.yyear[:-1]
             for acType in ['taxable', 'tax-deferred', 'tax-free']:
-                rawData[self.names[i]+' '+acType] = \
-                    self.y2accounts[acType].transpose()[i][:-1]
+                rawData[self.names[i] + ' ' + acType] = self.y2accounts[
+                    acType
+                ].transpose()[i][:-1]
             df = pd.DataFrame(rawData)
             for rows in dataframe_to_rows(df, index=False, header=True):
                 ws.append(rows)
@@ -1519,9 +1696,7 @@ class Plan:
             _formatSpreadsheet(ws, 'currency')
 
         # Save assets allocation ratios.
-        astDic = {'S&P 500': 0, 'Corporate Baa': 1,
-                  'T Bonds': 2, 'Common assets': 3
-                  }
+        astDic = {'S&P 500': 0, 'Corporate Baa': 1, 'T Bonds': 2, 'Common assets': 3}
         for i in range(self.count):
             sname = self.names[i] + '\'s AR'
             ws = wb.create_sheet(sname)
@@ -1529,9 +1704,11 @@ class Plan:
             rawData['year'] = self.yyear[:-1]
             for acType in ['taxable', 'tax-deferred', 'tax-free']:
                 for ast in astDic:
-                    rawData[ast+' / '+self.names[i]+' '+acType] = \
-                        self.y2assetRatios[acType].\
-                        transpose(1, 2, 0)[i][astDic[ast]][:-1]
+                    rawData[
+                        ast + ' / ' + self.names[i] + ' ' + acType
+                    ] = self.y2assetRatios[acType].transpose(1, 2, 0)[i][astDic[ast]][
+                        :-1
+                    ]
 
             df = pd.DataFrame(rawData)
             for rows in dataframe_to_rows(df, index=False, header=True):
@@ -1555,24 +1732,28 @@ class Plan:
         planData['tax bill'] = self.yincome['taxes']
 
         for i in range(self.count):
-            planData[self.names[i]+' txbl acc. wrdwl'] = \
-                self.y2source['taxable'].transpose()[i]
-            planData[self.names[i]+' RMD'] = \
-                self.y2source['rmd'].transpose()[i]
-            planData[self.names[i]+' distribution'] = \
-                self.y2source['dist'].transpose()[i]
-            planData[self.names[i]+' Roth conversion'] = \
-                self.y2source['RothX'].transpose()[i]
-            planData[self.names[i]+' tax-free wdrwl'] = \
-                self.y2source['tax-free'].transpose()[i]
-            planData[self.names[i]+' big-ticket items'] = \
-                self.y2source['bti'].transpose()[i]
+            planData[self.names[i] + ' txbl acc. wrdwl'] = self.y2source[
+                'taxable'
+            ].transpose()[i]
+            planData[self.names[i] + ' RMD'] = self.y2source['rmd'].transpose()[i]
+            planData[self.names[i] + ' distribution'] = self.y2source[
+                'dist'
+            ].transpose()[i]
+            planData[self.names[i] + ' Roth conversion'] = self.y2source[
+                'RothX'
+            ].transpose()[i]
+            planData[self.names[i] + ' tax-free wdrwl'] = self.y2source[
+                'tax-free'
+            ].transpose()[i]
+            planData[self.names[i] + ' big-ticket items'] = self.y2source[
+                'bti'
+            ].transpose()[i]
 
         df = pd.DataFrame(planData)
 
         while True:
             try:
-                fname = 'plan'+'_'+basename+'.csv'
+                fname = 'plan' + '_' + basename + '.csv'
                 df.to_csv(fname)
                 # Requires xlwt which is obsolete
                 # df.to_excel(fname)
@@ -1597,8 +1778,7 @@ class Plan:
         plt.show(block=False)
         plt.pause(0.001)
         while True:
-            key = input(
-                "[Enter] 'r' to repeat, 's' to save, or 'x' to exit: ")
+            key = input("[Enter] 'r' to repeat, 's' to save, or 'x' to exit: ")
             if key == 'r':
                 plt.close("all")
                 break
@@ -1633,10 +1813,10 @@ class Plan:
 
         total = sum(self.y2accounts['taxable'][-1][:])
         total += sum(self.y2accounts['tax-free'][-1][:])
-        total += (1 - taxRate)*sum(self.y2accounts['tax-deferred'][-1][:])
+        total += (1 - taxRate) * sum(self.y2accounts['tax-deferred'][-1][:])
 
-        div = tx.inflationAdjusted(1., self.span-1, self.rates)
-        value = total/div
+        div = tx.inflationAdjusted(1.0, self.span - 1, self.rates)
+        value = total / div
 
         return value, (div - 1)
 
@@ -1659,11 +1839,12 @@ class Plan:
         val, percent = self._estate(taxRate)
 
         now = datetime.date.today().year
-        print('%r' % self._name, self.yyear[-2],
-              'Estate: (%d $) %s (nominal %s),' %
-              (now, d(val), d(val*(1+percent))),
-              '\n\t\tcum. infl.: %s, heirs tax rate: %s' %
-              (pc(percent), pc(taxRate)))
+        print(
+            '%r' % self._name,
+            self.yyear[-2],
+            'Estate: (%d $) %s (nominal %s),' % (now, d(val), d(val * (1 + percent))),
+            '\n\t\tcum. infl.: %s, heirs tax rate: %s' % (pc(percent), pc(taxRate)),
+        )
 
         return
 
@@ -1675,9 +1856,10 @@ class Plan:
 
         config = configparser.ConfigParser()
 
-        config['Who'] = {'Count': str(self.count),
-                         'Names': ','.join(str(k) for k in self.names)
-                         }
+        config['Who'] = {
+            'Count': str(self.count),
+            'Names': ','.join(str(k) for k in self.names),
+        }
 
         # Parameters getting one value for each spouse.
         config['YOB'] = {}
@@ -1700,50 +1882,50 @@ class Plan:
             config['YOB'][self.names[i]] = str(self.yob[i])
             config['Life expectancy'][self.names[i]] = str(self.expectancy[i])
             config['Beneficiary'][self.names[i]] = str(self.beneficiary[i])
-            config['Pension amounts'][self.names[i]] = \
-                str(self.pensionAmount[i])
-            config['Pension ages'][self.names[i]] = \
-                str(self.pensionAge[i])
-            config['Social security amounts'][self.names[i]] = \
-                str(self.ssecAmount[i])
-            config['Social security ages'][self.names[i]] = \
-                str(self.ssecAge[i])
+            config['Pension amounts'][self.names[i]] = str(self.pensionAmount[i])
+            config['Pension ages'][self.names[i]] = str(self.pensionAge[i])
+            config['Social security amounts'][self.names[i]] = str(self.ssecAmount[i])
+            config['Social security ages'][self.names[i]] = str(self.ssecAge[i])
             for aType in ['taxable', 'tax-deferred', 'tax-free']:
-                config['Asset balances'][aType+' '+self.names[i]] = \
-                    str(self.n2balances[aType][i])
+                config['Asset balances'][aType + ' ' + self.names[i]] = str(
+                    self.n2balances[aType][i]
+                )
             for aType in listAR:
-                config['Initial allocation ratios'][aType+' '+self.names[i]] =\
-                    ', '.join(str(100*k) for k in self.boundsAR[aType][0][i])
-                config['Final allocation ratios'][aType+' '+self.names[i]] = \
-                    ', '.join(str(100*k) for k in self.boundsAR[aType][1][i])
+                config['Initial allocation ratios'][
+                    aType + ' ' + self.names[i]
+                ] = ', '.join(str(100 * k) for k in self.boundsAR[aType][0][i])
+                config['Final allocation ratios'][
+                    aType + ' ' + self.names[i]
+                ] = ', '.join(str(100 * k) for k in self.boundsAR[aType][1][i])
 
         # Joint parameters.
-        config['Parameters'] = \
-            {'Name': self._name,
-             'Target': str(self.target),
-             'Profile': str(self.profile),
-             'Heirs rate on tax-deferred estate': str(100*self.heirsTxRate),
-             'Spousal split': str(self.split),
-             'Survivor fraction': str(self.survivorFraction),
-             'Time lists file name': str(self.timeListsFileName),
-             'Coordinated allocations': str(self.coordinatedAR)
-             }
+        config['Parameters'] = {
+            'Name': self._name,
+            'Target': str(self.target),
+            'Profile': str(self.profile),
+            'Heirs rate on tax-deferred estate': str(100 * self.heirsTxRate),
+            'Spousal split': str(self.split),
+            'Survivor fraction': str(self.survivorFraction),
+            'Time lists file name': str(self.timeListsFileName),
+            'Coordinated allocations': str(self.coordinatedAR),
+        }
 
-        config['Rates'] = {'Method': str(self.rateMethod),
-                           'From': str(self.rateFrm),
-                           'To': str(self.rateTo)
-                           }
+        config['Rates'] = {
+            'Method': str(self.rateMethod),
+            'From': str(self.rateFrm),
+            'To': str(self.rateTo),
+        }
         if self.rateMethod == 'fixed':
-            config['Rates']['values'] = \
-                ', '.join(str(k) for k in self.rateValues)
+            config['Rates']['values'] = ', '.join(str(k) for k in self.rateValues)
 
-        with open(fileName+'.cfg', 'w') as configfile:
+        with open(fileName + '.cfg', 'w') as configfile:
             config.write(configfile)
 
         return
 
-    def _runOnce(self, stype, frm=rates.FROM, to=rates.TO,
-                 rates=None, myplots=[], tag=''):
+    def _runOnce(
+        self, stype, frm=rates.FROM, to=rates.TO, rates=None, myplots=[], tag=''
+    ):
         '''
         Run one instance of a simulation.
         '''
@@ -1752,12 +1934,15 @@ class Plan:
 
         self.run()
 
-        plotDic = {'rates': self.showRates, 'net income': self.showNetIncome,
-                   'sources': self.showSources, 'taxes': self.showTaxes,
-                   'gross income': self.showGrossIncome,
-                   'accounts': self.showAccounts,
-                   'distribution': self.showAssetDistribution
-                   }
+        plotDic = {
+            'rates': self.showRates,
+            'net income': self.showNetIncome,
+            'sources': self.showSources,
+            'taxes': self.showTaxes,
+            'gross income': self.showGrossIncome,
+            'accounts': self.showAccounts,
+            'distribution': self.showAssetDistribution,
+        }
 
         for pl in myplots:
             plotDic[pl](tag)
@@ -1774,17 +1959,23 @@ class Plan:
         successCount = 0
         for i in range(N):
             print('--------------------------------------------')
-            print('Running case # %d (%r)' % (i, frm+i))
-            self._runOnce('historical', frm+i, to+i, myplots=myplots, tag=tag)
+            print('Running case # %d (%r)' % (i, frm + i))
+            self._runOnce('historical', frm + i, to + i, myplots=myplots, tag=tag)
             print('Plan success:', self.success)
             if self.success:
                 successCount += 1
 
             # Use heirs tax rate provided on taxable part of estate.
             estate, factor = self._estate(self.heirsTxRate)
-            print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  '\n\t\tcum. infl.:', pc(factor),
-                  ', heirs tax rate:', pc(self.heirsTxRate))
+            print(
+                self.yyear[-2],
+                'Estate: (today\'s $)',
+                d(estate),
+                '\n\t\tcum. infl.:',
+                pc(factor),
+                ', heirs tax rate:',
+                pc(self.heirsTxRate),
+            )
             estateResults[i] = estate
             if len(myplots) > 0:
                 # Number of seconds to wait.
@@ -1794,10 +1985,10 @@ class Plan:
                 # plan.showAndSave()
 
         print('============================================')
-        print('Success rate:', successCount, 'out of', N,
-              '('+pc(successCount/N)+')')
-        print('Median estate value (today\'s $): ',
-              d(np.median(estateResults)))
+        print(
+            'Success rate:', successCount, 'out of', N, '(' + pc(successCount / N) + ')'
+        )
+        print('Median estate value (today\'s $): ', d(np.median(estateResults)))
 
         showHistogram(estateResults, binDiv=4)
 
@@ -1820,16 +2011,22 @@ class Plan:
 
             # Rely on self.heirsTxRate for rate.
             estate, factor = self._estate(self.heirsTxRate)
-            print(self.yyear[-2], 'Estate: (today\'s $)', d(estate),
-                  '\n\tcum. infl.:', pc(factor),
-                  ', heirs tax rate:', pc(self.heirsTxRate))
+            print(
+                self.yyear[-2],
+                'Estate: (today\'s $)',
+                d(estate),
+                '\n\tcum. infl.:',
+                pc(factor),
+                ', heirs tax rate:',
+                pc(self.heirsTxRate),
+            )
             estateResults[i] = estate
 
         print('============================================')
-        print('Success rate:', successCount, 'out of', N,
-              '('+pc(successCount/N)+')')
-        print('Median estate value (today\'s $): ',
-              d(np.median(estateResults)))
+        print(
+            'Success rate:', successCount, 'out of', N, '(' + pc(successCount / N) + ')'
+        )
+        print('Median estate value (today\'s $): ', d(np.median(estateResults)))
 
         showHistogram(estateResults, binDiv=5)
         u.setVerbose(prevState)
@@ -1842,7 +2039,7 @@ def d(value, f=0):
     '''
     Return a string formatting number in $ currency.
     '''
-    mystr = '${:,.'+str(f)+'f}'
+    mystr = '${:,.' + str(f) + 'f}'
 
     return mystr.format(value)
 
@@ -1851,9 +2048,9 @@ def pc(value, f=1, mul=100):
     '''
     Return a string formatting number in percent.
     '''
-    mystr = '{:.'+str(f)+'f}%'
+    mystr = '{:.' + str(f) + 'f}%'
 
-    return mystr.format(mul*value)
+    return mystr.format(mul * value)
 
 
 def _formatSpreadsheet(ws, ftype):
@@ -1887,7 +2084,7 @@ def savePlan(plan, fileName):
     '''
     Save plan configuration parameters to a file.
     '''
-    u.vprint('Saving plan config as', fileName+'.cfg')
+    u.vprint('Saving plan config as', fileName + '.cfg')
 
     plan._saveConfig(fileName)
 
@@ -1900,10 +2097,10 @@ def readPlan(fileName):
     '''
     import configparser
 
-    u.vprint('Reading plan config from', fileName+'.cfg')
+    u.vprint('Reading plan config from', fileName + '.cfg')
 
     config = configparser.ConfigParser()
-    config.read(fileName+'.cfg')
+    config.read(fileName + '.cfg')
 
     count = int(config['Who']['count'])
     names = config['Who']['names'].split(',')
@@ -1944,13 +2141,16 @@ def readPlan(fileName):
         ssecAmounts.append(int(config['Social security amounts'][names[i]]))
         ssecAges.append(int(config['Social security ages'][names[i]]))
         for aType in ['taxable', 'tax-deferred', 'tax-free']:
-            n2balances[aType].append(float(config['Asset balances']
-                                     [aType+' '+names[i]]))
+            n2balances[aType].append(
+                float(config['Asset balances'][aType + ' ' + names[i]])
+            )
         for aType in listAR:
-            initialAR[aType].append(config['Initial allocation ratios']
-                                    [aType+' '+names[i]].split(','))
-            finalAR[aType].append(config['Final allocation ratios']
-                                  [aType+' '+names[i]].split(','))
+            initialAR[aType].append(
+                config['Initial allocation ratios'][aType + ' ' + names[i]].split(',')
+            )
+            finalAR[aType].append(
+                config['Final allocation ratios'][aType + ' ' + names[i]].split(',')
+            )
 
     # Convert those strings to float.
     for aType in listAR:
@@ -1962,36 +2162,45 @@ def readPlan(fileName):
     plan.setName(name)
     plan.setPension(pensionAmounts, pensionAges)
     plan.setSocialSecurity(ssecAmounts, ssecAges)
-    plan.setAssetBalances(taxable=n2balances['taxable'],
-                          taxDeferred=n2balances['tax-deferred'],
-                          taxFree=n2balances['tax-free'],
-                          beneficiary=beneficiary)
+    plan.setAssetBalances(
+        taxable=n2balances['taxable'],
+        taxDeferred=n2balances['tax-deferred'],
+        taxFree=n2balances['tax-free'],
+        beneficiary=beneficiary,
+    )
 
     if coordinatedAR == 'none':
-        plan.setInitialAR(taxable=initialAR['taxable'],
-                          taxDeferred=initialAR['tax-deferred'],
-                          taxFree=initialAR['tax-free'])
-        plan.setFinalAR(taxable=finalAR['taxable'],
-                        taxDeferred=finalAR['tax-deferred'],
-                        taxFree=finalAR['tax-free'])
+        plan.setInitialAR(
+            taxable=initialAR['taxable'],
+            taxDeferred=initialAR['tax-deferred'],
+            taxFree=initialAR['tax-free'],
+        )
+        plan.setFinalAR(
+            taxable=finalAR['taxable'],
+            taxDeferred=finalAR['tax-deferred'],
+            taxFree=finalAR['tax-free'],
+        )
     elif coordinatedAR == 'individual':
-        plan.setCoordinatedAR(initial=initialAR['coordinated'],
-                              final=finalAR['coordinated'])
+        plan.setCoordinatedAR(
+            initial=initialAR['coordinated'], final=finalAR['coordinated']
+        )
     elif coordinatedAR == 'both':
-        plan.setCoordinatedAR(initial=initialAR['coordinated'][0],
-                              final=finalAR['coordinated'][0])
+        plan.setCoordinatedAR(
+            initial=initialAR['coordinated'][0], final=finalAR['coordinated'][0]
+        )
     else:
         u.xprint('Unknown coordination type:', coordinatedAR)
 
     plan.interpolateAR()
 
-    plan.setDesiredIncome(float(config['Parameters']['Target']),
-                          config['Parameters']['Profile'])
+    plan.setDesiredIncome(
+        float(config['Parameters']['Target']), config['Parameters']['Profile']
+    )
     plan.setHeirsTaxRate(
-            float(config['Parameters']['Heirs rate on tax-deferred estate']))
+        float(config['Parameters']['Heirs rate on tax-deferred estate'])
+    )
     plan.setSpousalSplit(config['Parameters']['Spousal split'])
-    plan.setSurvivorFraction(
-            float(config['Parameters']['Survivor fraction']))
+    plan.setSurvivorFraction(float(config['Parameters']['Survivor fraction']))
 
     timeListsFileName = config['Parameters']['Time lists file name']
     plan.readContributions(timeListsFileName)
@@ -2015,7 +2224,7 @@ def _saveWorkbook(wb, basename, overwrite=False):
     '''
     import os.path as path
 
-    fname = 'instance'+'_'+basename+'.xlsx'
+    fname = 'instance' + '_' + basename + '.xlsx'
 
     if overwrite is False and path.isfile(fname):
         print('File ', fname, ' already exists.')
@@ -2043,11 +2252,21 @@ def _saveWorkbook(wb, basename, overwrite=False):
 def _pfReturn(assetRatios, rates, year, who):
     '''
     Return annual rate of return depending on portfolio asset ratio.
+
+    For the first year, keep fraction of days remaining in the year.
     '''
-    return (assetRatios[year][who][0]*rates[year][0] +
-            assetRatios[year][who][1]*rates[year][1] +
-            assetRatios[year][who][2]*rates[year][2] +
-            assetRatios[year][who][3]*rates[year][3])
+    # Only consider the time remaining this year.
+    if year == 0:
+        fac = 1 - datetime.datetime.today().timetuple().tm_yday / 365
+    else:
+        fac = 1
+
+    return (
+        assetRatios[year][who][0] * fac * rates[year][0]
+        + assetRatios[year][who][1] * fac * rates[year][1]
+        + assetRatios[year][who][2] * fac * rates[year][2]
+        + assetRatios[year][who][3] * fac * rates[year][3]
+    )
 
 
 def _age(yob, refYear=0):
@@ -2058,9 +2277,9 @@ def _age(yob, refYear=0):
     if refYear == 0:
         refYear = datetime.date.today().year
 
-    assert (refYear >= yob)
+    assert refYear >= yob
 
-    return (refYear - yob)
+    return refYear - yob
 
 
 def _spendingAdjustment(age, profile='flat'):
@@ -2068,19 +2287,52 @@ def _spendingAdjustment(age, profile='flat'):
     Return spending profile for age provided.
     Profile can be 'flat' or 'smile'.
     '''
-    assert (age <= 100)
+    assert age <= 100
     # Return 1 for age before 65 of flat profile.
     if age <= 65 or profile == 'flat':
-        return 1.
+        return 1.0
 
     if profile == 'smile':
         # From the gogo years to the no-go years.
-        table = [1.000, 1.010, 1.015, 1.010, 1.000, 0.993, 0.978,
-                 0.960, 0.940, 0.918, 0.895, 0.871, 0.848, 0.825,
-                 0.804, 0.785, 0.769, 0.757, 0.748, 0.744, 0.745,
-                 0.752, 0.766, 0.787, 0.815, 0.852, 0.899, 0.955,
-                 1.021, 1.059, 1.100, 1.121, 1.141, 1.151, 1.161, 1.171]
-        return table[age-65]
+        table = [
+            1.000,
+            1.010,
+            1.015,
+            1.010,
+            1.000,
+            0.993,
+            0.978,
+            0.960,
+            0.940,
+            0.918,
+            0.895,
+            0.871,
+            0.848,
+            0.825,
+            0.804,
+            0.785,
+            0.769,
+            0.757,
+            0.748,
+            0.744,
+            0.745,
+            0.752,
+            0.766,
+            0.787,
+            0.815,
+            0.852,
+            0.899,
+            0.955,
+            1.021,
+            1.059,
+            1.100,
+            1.121,
+            1.141,
+            1.151,
+            1.161,
+            1.171,
+        ]
+        return table[age - 65]
 
     u.xprint('In spendingAdjustment: Unknown profile', profile)
 
@@ -2094,16 +2346,17 @@ def _readTimeLists(filename, n):
     import pandas as pd
 
     # Expected headers in each excel sheet, one per individual.
-    timeHorizonItems = ['year',
-                        'anticipated wages',
-                        'ctrb taxable',
-                        'ctrb 401k',
-                        'ctrb Roth 401k',
-                        'ctrb IRA',
-                        'ctrb Roth IRA',
-                        'Roth X',
-                        'big ticket items'
-                        ]
+    timeHorizonItems = [
+        'year',
+        'anticipated wages',
+        'ctrb taxable',
+        'ctrb 401k',
+        'ctrb Roth 401k',
+        'ctrb IRA',
+        'ctrb Roth IRA',
+        'Roth X',
+        'big ticket items',
+    ]
 
     timeLists = []
     names = []
@@ -2147,19 +2400,25 @@ def _checkTimeLists(names, timeLists, horizons):
     for i in range(len(names)):
         yend = now + horizons[i]
         if timeLists[i]['year'][-1] < yend:
-            u.xprint('Time horizon for', names[i],
-                     'is too short.\n\tIt should end in', yend,
-                     'but ends in', timeLists[i]['year'][-1])
+            u.xprint(
+                'Time horizon for',
+                names[i],
+                'is too short.\n\tIt should end in',
+                yend,
+                'but ends in',
+                timeLists[i]['year'][-1],
+            )
 
-    timeHorizonItems = ['year',
-                        'anticipated wages',
-                        'ctrb taxable',
-                        'ctrb 401k',
-                        'ctrb Roth 401k',
-                        'ctrb IRA',
-                        'ctrb Roth IRA',
-                        'Roth X',
-                        ]
+    timeHorizonItems = [
+        'year',
+        'anticipated wages',
+        'ctrb taxable',
+        'ctrb 401k',
+        'ctrb Roth 401k',
+        'ctrb IRA',
+        'ctrb Roth IRA',
+        'Roth X',
+    ]
 
     # Verify that all numbers except bti are positive.
     for i in range(len(names)):
@@ -2190,41 +2449,42 @@ def _balance(c, X, Y, Z):
         return x, y, z
 
     # Maximize stocks in tax-free account, followed by tax-deferred account.
-    z[0] = c[0]*T/(Z + 0.01)
-    z[0] = min(z[0], 1.)
-    y[0] = (c[0]*T - z[0]*Z)/(Y + 0.01)
-    y[0] = min(y[0], 1.)
-    x[0] = (c[0]*T - y[0]*Y - z[0]*Z)/(X + 0.01)
+    z[0] = c[0] * T / (Z + 0.01)
+    z[0] = min(z[0], 1.0)
+    y[0] = (c[0] * T - z[0] * Z) / (Y + 0.01)
+    y[0] = min(y[0], 1.0)
+    x[0] = (c[0] * T - y[0] * Y - z[0] * Z) / (X + 0.01)
 
     # Maximize bonds in tax-free account, followed by tax-deferred account.
-    z[1] = c[1]*T/(Z + 0.01)
-    z[1] = min(z[1], 1. - z[0])
-    y[1] = (c[1]*T - z[1]*Z)/(Y + 0.01)
-    y[1] = min(y[1], 1. - y[0])
-    x[1] = (c[1]*T - y[1]*Y - z[1]*Z)/(X + 0.01)
-    x[1] = min(x[1], 1. - x[0])
+    z[1] = c[1] * T / (Z + 0.01)
+    z[1] = min(z[1], 1.0 - z[0])
+    y[1] = (c[1] * T - z[1] * Z) / (Y + 0.01)
+    y[1] = min(y[1], 1.0 - y[0])
+    x[1] = (c[1] * T - y[1] * Y - z[1] * Z) / (X + 0.01)
+    x[1] = min(x[1], 1.0 - x[0])
 
     # Maximize fixed assets in taxable account.
-    x[3] = c[3]*T/(X + 0.01)
-    x[3] = min(x[3], 1. - x[0] - x[1])
-    y[3] = (c[3]*T - x[3]*X)/(Y + 0.01)
-    y[3] = min(y[3], 1. - y[0] - y[1])
-    z[3] = (c[3]*T - x[3]*X - y[3]*Y)/(Z + 0.01)
-    z[3] = min(z[3], 1. - z[0] - z[1])
+    x[3] = c[3] * T / (X + 0.01)
+    x[3] = min(x[3], 1.0 - x[0] - x[1])
+    y[3] = (c[3] * T - x[3] * X) / (Y + 0.01)
+    y[3] = min(y[3], 1.0 - y[0] - y[1])
+    z[3] = (c[3] * T - x[3] * X - y[3] * Y) / (Z + 0.01)
+    z[3] = min(z[3], 1.0 - z[0] - z[1])
 
     # Treasury bonds get the rest.
     if X > 0.01:
-        x[2] = 1. - sum(x)
+        x[2] = 1.0 - sum(x)
     if Y > 0.01:
-        y[2] = 1. - sum(y)
+        y[2] = 1.0 - sum(y)
     if Z > 0.01:
-        z[2] = 1. - sum(z)
+        z[2] = 1.0 - sum(z)
 
     return x, y, z
 
 
-def _smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
-                  names, ages, commit=True):
+def _smartBanking(
+    amount, taxable, taxdef, taxfree, year, wdrlRatio, names, ages, commit=True
+):
     '''
     Deposit/withdraw amount from given accounts. Return dictionary
     of lists itemizing amount taken from taxable, tax-deferred,
@@ -2235,16 +2495,14 @@ def _smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
     taken from respective spousal accounts, with reference to first
     spouse (other is 1-x).
     '''
-    assert (0 <= wdrlRatio and wdrlRatio <= 1.)
-    amounts = {'taxable': [],
-               'tax-def': [],
-               'tax-free': []
-               }
+    assert 0 <= wdrlRatio and wdrlRatio <= 1.0
+    amounts = {'taxable': [], 'tax-def': [], 'tax-free': []}
     totAmount = 0
     for i in range(len(names)):
-        subAmount = (wdrlRatio - 2*i*wdrlRatio + i)*amount
-        itemized = _smartBankingSub(subAmount, taxable, taxdef, taxfree,
-                                    year, i, names, ages[year], commit)
+        subAmount = (wdrlRatio - 2 * i * wdrlRatio + i) * amount
+        itemized = _smartBankingSub(
+            subAmount, taxable, taxdef, taxfree, year, i, names, ages[year], commit
+        )
 
         amounts['taxable'].append(itemized[0])
         amounts['tax-def'].append(itemized[1])
@@ -2258,8 +2516,9 @@ def _smartBanking(amount, taxable, taxdef, taxfree, year, wdrlRatio,
     return amounts, totAmount
 
 
-def _smartBankingSub(amount, taxable, taxdef, taxfree,
-                     year, i, names, ages, commit=True):
+def _smartBankingSub(
+    amount, taxable, taxdef, taxfree, year, i, names, ages, commit=True
+):
     '''
     Deposit/withdraw amount from given accounts.
     Return amounts withdrawn from relative accounts:
@@ -2314,12 +2573,10 @@ def _smartBankingSub(amount, taxable, taxdef, taxfree,
     remain -= portion3
 
     if commit:
-        u.vprint('WARNING: Withdrawal of', d(amount),
-                 'in year', year, 'for', names[i])
-        u.vprint('         short of', d(remain),
-                 'as all accounts were exhausted!')
+        u.vprint('WARNING: Withdrawal of', d(amount), 'in year', year, 'for', names[i])
+        u.vprint('         short of', d(remain), 'as all accounts were exhausted!')
 
-    return [portion1, portion2, portion3, withdrawal-remain]
+    return [portion1, portion2, portion3, withdrawal - remain]
 
 
 def _checkPenalty(account, amount, names, ages, i):
@@ -2328,9 +2585,14 @@ def _checkPenalty(account, amount, names, ages, i):
     will trigger a 10% penalty. Check for the age.
     '''
     if ages[i] < 60:
-        u.vprint('WARNING: Withdrawal of', d(amount), 'from',
-                 names[i], account,
-                 'account will trigger a 10% penalty!')
+        u.vprint(
+            'WARNING: Withdrawal of',
+            d(amount),
+            'from',
+            names[i],
+            account,
+            'account will trigger a 10% penalty!',
+        )
 
     return
 
@@ -2342,22 +2604,22 @@ def showHistogram(data, tag='', binDiv=10):
     import matplotlib.pyplot as plt
     import matplotlib.ticker as tk
 
-    nbins = int(len(data)/binDiv)
+    nbins = int(len(data) / binDiv)
     fig, ax = plt.subplots(tight_layout=True)
 
     title = 'Estate Value Distribution'
     if tag != '':
-        title += ' - '+tag
+        title += ' - ' + tag
 
     ax.set_title(title)
     label = 'median: ' + d(np.median(data))
     ax.hist(data, bins=nbins, label=label)
     ax.set_ylabel('N')
-    ax.legend(loc='upper right', reverse=False,
-              fontsize=8, framealpha=0.7)
+    ax.legend(loc='upper right', reverse=False, fontsize=8, framealpha=0.7)
     ax.set_xlabel('today\'s k$')
     ax.get_xaxis().set_major_formatter(
-            tk.FuncFormatter(lambda x, p: format(int(x/1000), ',')))
+        tk.FuncFormatter(lambda x, p: format(int(x / 1000), ','))
+    )
 
     plt.show()
 
@@ -2370,12 +2632,12 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
     '''
     import matplotlib.pyplot as plt
 
-    title = 'Rates from '+str(frm)+' to '+str(to)
+    title = 'Rates from ' + str(frm) + ' to ' + str(to)
     # Bring year values to indices.
     frm -= rates.FROM
     to -= rates.FROM
 
-    nbins = int((to - frm)/4)
+    nbins = int((to - frm) / 4)
     fig, ax = plt.subplots(1, 4, sharey=True, sharex=True, tight_layout=True)
 
     dat0 = np.array(rates.SP500[frm:to])
@@ -2385,22 +2647,22 @@ def showRateDistributions(frm=rates.FROM, to=rates.TO):
 
     fig.suptitle(title)
     ax[0].set_title('S&P500')
-    label = '<>: '+pc(np.mean(dat0), 2, 1)
+    label = '<>: ' + pc(np.mean(dat0), 2, 1)
     ax[0].hist(dat0, bins=nbins, label=label)
     ax[0].legend(loc='upper left', fontsize=8, framealpha=0.7)
 
     ax[1].set_title('BondsBaa')
-    label = '<>: '+pc(np.mean(dat1), 2, 1)
+    label = '<>: ' + pc(np.mean(dat1), 2, 1)
     ax[1].hist(dat1, bins=nbins, label=label)
     ax[1].legend(loc='upper left', fontsize=8, framealpha=0.7)
 
     ax[2].set_title('TNotes')
-    label = '<>: '+pc(np.mean(dat2), 2, 1)
+    label = '<>: ' + pc(np.mean(dat2), 2, 1)
     ax[2].hist(dat1, bins=nbins, label=label)
     ax[2].legend(loc='upper left', fontsize=8, framealpha=0.7)
 
     ax[3].set_title('Inflation')
-    label = '<>: '+pc(np.mean(dat3), 2, 1)
+    label = '<>: ' + pc(np.mean(dat3), 2, 1)
     ax[3].hist(dat3, bins=nbins, label=label)
     ax[3].legend(loc='upper left', fontsize=8, framealpha=0.7)
 
@@ -2419,8 +2681,7 @@ def _printDot(trials):
             print()
 
 
-def _amountAnnealRoth(p2, baseValue, txrate,
-                      minConv, startConv, only):
+def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only):
     '''
     Determine best Roth conversions through mixed sweeping approach,
     starting from large conversions being reduced by half over the
@@ -2430,17 +2691,21 @@ def _amountAnnealRoth(p2, baseValue, txrate,
     conversions to the individual named.
     '''
     import random
+
     random.seed()
     # Make conversions proportional to first-year balances for spouses.
     ratio = [1, 0]
 
     if p2.count == 2:
-        ratio[0] = (p2.y2accounts['tax-deferred'][0][0]
-                    / sum(p2.y2accounts['tax-deferred'][0][:]))
+        ratio[0] = p2.y2accounts['tax-deferred'][0][0] / sum(
+            p2.y2accounts['tax-deferred'][0][:]
+        )
         ratio[1] = 1 - ratio[0]
 
-    print('Starting Roth optimizer.',
-          '\n\tThis calculation typically takes less than a few minutes.')
+    print(
+        'Starting Roth optimizer.',
+        '\n\tThis calculation typically takes less than a few minutes.',
+    )
     print('\tEach dot represents 100 different scenarios tested:')
 
     # Allow all to make conversions.
@@ -2450,7 +2715,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
     else:
         who = p2.names.index(only)
         count = 1
-        whos = range(who, who+1)
+        whos = range(who, who + 1)
 
     myConv = startConv
     maxValue = baseValue
@@ -2465,7 +2730,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
         loopMax = maxValue
         # No conversion during last year?
         for n in range(p2.horizons[who]):
-            rothX = tx.inflationAdjusted(myConv*ratio[who], n, p2.rates)
+            rothX = tx.inflationAdjusted(myConv * ratio[who], n, p2.rates)
 
             if rothX > p2.y2accounts['tax-deferred'][n][who]:
                 break
@@ -2502,8 +2767,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
                 success = False
                 for j in whos:
                     for n in reversed(range(p2.horizons[j])):
-                        rothX = tx.inflationAdjusted(
-                                    myConv*ratio[j], n, p2.rates)
+                        rothX = tx.inflationAdjusted(myConv * ratio[j], n, p2.rates)
 
                         if rothX < p2.timeLists[j]['Roth X'][n]:
                             p2.timeLists[j]['Roth X'][n] -= rothX
@@ -2521,7 +2785,7 @@ def _amountAnnealRoth(p2, baseValue, txrate,
                             _printDot(trials)
 
         # Alternating between individuals if needed.
-        i = (i+1) % count
+        i = (i + 1) % count
 
     print('\nReturning after', trials, 'trials.')
 
@@ -2548,7 +2812,7 @@ def optimizeRoth(p, txrate, minConv=10, startConv=64000, only=None):
     Roth conversions.
     '''
     p2 = clone(p)
-    p2.setName(p._name+' (Roth optimized)')
+    p2.setName(p._name + ' (Roth optimized)')
 
     txrate /= 100
 
@@ -2556,19 +2820,24 @@ def optimizeRoth(p, txrate, minConv=10, startConv=64000, only=None):
 
     # Start by zeroing all RothX in cloned plan.
     for i in range(p2.count):
-        for n in range(p2.horizons[i]+1):
+        for n in range(p2.horizons[i] + 1):
             p2.timeLists[i]['Roth X'][n] = 0
 
     p2.run()
     baseValue, mul = p2._estate(txrate)
 
-    bestX = _amountAnnealRoth(p2, baseValue, txrate,
-                              minConv, startConv, only)
+    bestX = _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only)
     p2.run()
     newValue, mul = p2._estate(txrate)
     now = datetime.date.today().year
-    print(p2.yyear[-2], 'Estate (in %d $) increased from' % now, d(baseValue),
-          'to', d(newValue), '(+%s)' % d(newValue - baseValue))
+    print(
+        p2.yyear[-2],
+        'Estate (in %d $) increased from' % now,
+        d(baseValue),
+        'to',
+        d(newValue),
+        '(+%s)' % d(newValue - baseValue),
+    )
 
     u.setVerbose(prevState)
 
@@ -2606,5 +2875,3 @@ def isInJupyter():
         return False
 
     return True
-
-

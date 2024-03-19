@@ -47,5 +47,3 @@ def xprint(*args, **kwargs):
     print("ERROR:", *args, file=sys.stderr, **kwargs)
     print("Exiting...", file=sys.stderr)
     sys.exit(-1)
-
-
