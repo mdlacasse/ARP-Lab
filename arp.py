@@ -1276,7 +1276,7 @@ class Plan:
         '''
 
         y2stack = {}
-        assetDic = {'stocks': 0, 'C bonds': 1, 'T bonds': 2, 'common': 3}
+        assetDic = {'stocks': 0, 'C bonds': 1, 'T notes': 2, 'common': 3}
         for acType in ['taxable', 'tax-deferred', 'tax-free']:
             stackNames = []
             for key in assetDic:
@@ -1317,7 +1317,7 @@ class Plan:
         else:
             acList = ['taxable', 'tax-deferred', 'tax-free']
 
-        assetDic = {'stocks': 0, 'C bonds': 1, 'T bonds': 2, 'common': 3}
+        assetDic = {'stocks': 0, 'C bonds': 1, 'T notes': 2, 'common': 3}
         for i in range(count):
             y2stack = {}
             for acType in acList:
@@ -1546,7 +1546,7 @@ class Plan:
         rateName = [
             'S&P500 including dividends',
             'Baa Corporate bonds',
-            '10-y Treasury bonds',
+            '10-y Treasury notes',
             'Inflation',
         ]
         ltype = ['-', '-.', ':', '--']
@@ -1582,7 +1582,7 @@ class Plan:
         used for the plan as follows:
             - S&P 500
             - Corporate Baa bonds
-            - Treasury bill (10y)
+            - Treasury notes (10y)
             - Inflation.
 
         The subsequent worksheets has the sources for each
@@ -1604,7 +1604,7 @@ class Plan:
         ratios for each spouse:
             - S&P 500
             - Corporate Baa bonds
-            - Treasury bill (10y)
+            - Treasury notes (10y)
             - inflation-indexed assets.
 
         '''
@@ -2437,7 +2437,7 @@ def _balance(c, X, Y, Z):
     x, y, and z are corresponding allocation ratios.
 
     For c[], this is the overall desired allocation:
-    0 is stock, 1 C bonds, 2 T bonds, and 3 common assets are ratios.
+    0 is stock, 1 C bonds, 2 T notes, and 3 common assets are ratios.
     '''
     x = np.zeros((4))
     y = np.zeros((4))
@@ -2471,7 +2471,7 @@ def _balance(c, X, Y, Z):
     z[3] = (c[3] * T - x[3] * X - y[3] * Y) / (Z + 0.01)
     z[3] = min(z[3], 1.0 - z[0] - z[1])
 
-    # Treasury bonds get the rest.
+    # Treasury notes get the rest.
     if X > 0.01:
         x[2] = 1.0 - sum(x)
     if Y > 0.01:
