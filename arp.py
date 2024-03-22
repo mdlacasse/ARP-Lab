@@ -581,6 +581,16 @@ class Plan:
 
         return
 
+    def clearRothX(self):
+        '''
+        Remove all Roth conversions that might be in the plan.
+        '''
+        for i in range(self.count):
+            for n in range(self.horizons[i] + 1):
+                self.timeLists[i]['Roth X'][n] = 0
+
+        return
+
     def setSpousalSplit(self, split):
         '''
         Specify ration of withdrawals between spousal accounts.
@@ -2818,10 +2828,7 @@ def optimizeRoth(p, txrate, minConv=10, startConv=64000, only=None):
     prevState = u.setVerbose(False)
 
     # Start by zeroing all RothX in cloned plan.
-    for i in range(p2.count):
-        for n in range(p2.horizons[i] + 1):
-            p2.timeLists[i]['Roth X'][n] = 0
-
+    p2.clearRothX()
     p2.run()
     baseValue, mul = p2._estate(txrate)
 
