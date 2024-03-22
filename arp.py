@@ -2096,7 +2096,7 @@ def _getUnits(units):
     '''
     if units is None:
         fac = 1
-    if units in {'k', 'K'}:
+    elif units in {'k', 'K'}:
         fac = 1000
     elif units in {'m', 'M'}:
         fac = 1000000
