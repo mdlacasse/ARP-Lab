@@ -34,16 +34,17 @@ ARP Lab relies on a few implicit assumptions:
     1) taxable investment accounts (CD's, bank savings accounts, stock investment accounts, etc.);
     2) tax-deferred savings accounts (e.g., 401k, 403b, etc.);
     3) tax-free savings accounts (Roth IRA, Roth 401k, etc.).
+- RMDs are made. Table used for spouses assumes they are less than 10 years apart;
 - Single and Married Filing Jointly are currently the only two choices for income tax calculations;
 - Rates of return provided for the S&P 500 data include dividends;
 - No investment administration fees are accounted for;
-- No elaborate tax strategies are considered, such as tax-loss harvesting strategy, net unrealized appreciation, or even reduced rates on long-term capital gains;
+- No elaborate tax strategies are considered, such as tax-loss harvesting strategy, net unrealized appreciation, step-up in basis, or even reduced rates on long-term capital gains;
 - Contributions to savings accounts are assumed to be made at half-year, in the hope of averaging periodic contributions made evenly through the year;
 - No estate tax calculations are included. Only tax on the tax-deferred portion of the estate is accounted for when reporting estate value in today's $;
 - For spouses, surplus over the desired joint income will be deposited in taxable accounts proportionally to that year's spousal income ratio;
 - Tax and IRMAA brackets are assumed to follow inflation;
-- Roth conversions are assumed to be done at the beginning of the year;
-- Social security benefits are assumed to be adjusted for inflation;
+- Roth conversions are assumed to be performed at the beginning of the year;
+- Social security benefits are assumed to be adjusted for inflation, and are assumed to be taxed at 85%;
 - Most importantly, tax rules are only inflation-adjusted and projected in the future without any consideration on likely changes to happen with new administrations. As of this release, the tax code of 2017 is assumed to be returning at the expiration of the TCJA after 2025.
 
 ## Default values for parameters
