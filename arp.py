@@ -472,7 +472,9 @@ class Plan:
 
         return
 
-    def setAssetBalances(self, *, taxable, taxDeferred, taxFree, beneficiary):
+    def setAssetBalances(
+        self, *, taxable, taxDeferred, taxFree, beneficiary, units=None
+    ):
         '''
         Four entries must be provided. The first three are lists
         containing the balance of all assets in each category for
@@ -480,11 +482,19 @@ class Plan:
         the other spouse as a beneficiary. For single individuals,
         these lists will contain only one entry and the beneficiary
         value is not relevant.
+
+        Units of 'k', or 'M'
         '''
         assert len(taxable) == self.count
         assert len(taxDeferred) == self.count
         assert len(taxFree) == self.count
         assert len(beneficiary) == self.count
+
+        fac = _getUnits(units)
+
+        _rescale(taxable, fac)
+        _rescale(taxDeferred, fac)
+        _rescale(taxFree, fac)
 
         self.n2balances['taxable'][:] = taxable
         self.n2balances['tax-deferred'][:] = taxDeferred
@@ -636,11 +646,12 @@ class Plan:
         else:
             u.xprint('Unknown split keyword:', self.split)
 
-    def setDesiredIncome(self, income, profile):
+    def setDesiredIncome(self, income, profile, units=None):
         '''
         Set the net target income in retirement following the specified
         profile. Profile can be 'flat' or 'smile'.
         '''
+        income *= _getUnits(units)
         self.target = income
         if profile == 'smile' or profile == 'flat':
             self.profile = profile
@@ -651,13 +662,16 @@ class Plan:
 
         return
 
-    def setPension(self, amounts, ages):
+    def setPension(self, amounts, ages, units=None):
         '''
         Set amounts of fixed income pensions if any, and age at which
         it will start.
         '''
         assert len(amounts) == self.count
         assert len(ages) == self.count
+
+        fac = _getUnits(units)
+        _rescale(amounts, fac)
 
         self.pensionAmount = amounts
         self.pensionAge = ages
@@ -676,13 +690,16 @@ class Plan:
 
         return 0.0
 
-    def setSocialSecurity(self, amounts, ages):
+    def setSocialSecurity(self, amounts, ages, units=None):
         '''
-        Set amounts of SS income if any, and age at which
+        Set yearly amounts of SS income if any, and age at which
         it will start.
         '''
         assert len(amounts) == self.count
         assert len(ages) == self.count
+
+        fac = _getUnits(units)
+        _rescale(amounts, fac)
 
         self.ssecAmount = amounts
         self.ssecAge = ages
@@ -2063,6 +2080,32 @@ def pc(value, f=1, mul=100):
     return mystr.format(mul * value)
 
 
+def _rescale(vals, fac):
+    '''
+    Rescale elements of a list by factor fac.
+    '''
+    for i in range(len(vals)):
+        vals[i] *= fac
+
+    return
+
+
+def _getUnits(units):
+    '''
+    Return proper factor for units.
+    '''
+    if units is None:
+        fac = 1
+    if units in {'k', 'K'}:
+        fac = 1000
+    elif units in {'m', 'M'}:
+        fac = 1000000
+    else:
+        u.xprint('Unknown units', units)
+
+    return fac
+
+
 def _formatSpreadsheet(ws, ftype):
     '''
     Utility function to beautify spreadsheet.
@@ -2736,7 +2779,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only):
         nMax = -1
         rothXmax = 0
         loopMax = maxValue
-        # No conversion during last year?
+        # Don't allow conversions during last year alive.
         for n in range(p2.horizons[who]):
             rothX = tx.inflationAdjusted(myConv * ratio[who], n, p2.rates)
 
@@ -2767,7 +2810,7 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only):
         i = (i + 1) % len(whos)
         who = whos[i]
 
-        # If nothing happened during two last rounds:
+        # If nothing happened during last round:
         # reduce conversion amount and look for overshoots.
         if blank == len(whos):
             myConv /= 2
