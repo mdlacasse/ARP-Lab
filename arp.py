@@ -1955,6 +1955,7 @@ class Plan:
         '''
         to = frm + self.span - 1
         N = rates.TO - self.span - frm + 2
+        now = datetime.date.today().year
         estateResults = np.zeros(N)
         successCount = 0
         for i in range(N):
@@ -1966,17 +1967,16 @@ class Plan:
                 successCount += 1
 
             # Use heirs tax rate provided on taxable part of estate.
-            estate, factor = self._estate(self.heirsTxRate)
+            val, percent = self._estate(self.heirsTxRate)
             print(
+                '%r' % self._name,
                 self.yyear[-2],
-                'Estate: (today\'s $)',
-                d(estate),
-                '\n\t\tcum. infl.:',
-                pc(factor),
-                ', heirs tax rate:',
-                pc(self.heirsTxRate),
+                'Estate: (%d $) %s (nominal %s),'
+                % (now, d(val), d(val * (1 + percent))),
+                '\n\t\tcum. infl.: %s, heirs tax rate: %s'
+                % (pc(percent), pc(self.heirsTxRate)),
             )
-            estateResults[i] = estate
+            estateResults[i] = val
             if len(myplots) > 0:
                 # Number of seconds to wait.
                 # For embedding in jupyter set to a low value.
@@ -1986,9 +1986,9 @@ class Plan:
 
         print('============================================')
         print(
-            'Success rate:', successCount, 'out of', N, '(' + pc(successCount / N) + ')'
+            'Success rate: %d out of %d (%s)' % (successCount, N, pc(successCount / N))
         )
-        print('Median estate value (today\'s $): ', d(np.median(estateResults)))
+        print('Median estate value (%d $): %s' % (now, d(np.median(estateResults))))
 
         showHistogram(estateResults, binDiv=4)
 
@@ -2710,11 +2710,9 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only):
 
     # Allow all to make conversions.
     if only is None:
-        count = p2.count
         whos = range(p2.count)
     else:
         who = p2.names.index(only)
-        count = 1
         whos = range(who, who + 1)
 
     myConv = startConv
@@ -2755,9 +2753,13 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only):
         else:
             blank += 1
 
+        # Alternating between individuals if needed.
+        i = (i + 1) % len(whos)
+        who = whos[i]
+
         # If nothing happened during two last rounds:
         # reduce conversion amount and look for overshoots.
-        if blank == count:
+        if blank == len(whos):
             myConv /= 2
             blank = 0
 
@@ -2783,9 +2785,6 @@ def _amountAnnealRoth(p2, baseValue, txrate, minConv, startConv, only):
 
                             trials += 1
                             _printDot(trials)
-
-        # Alternating between individuals if needed.
-        i = (i + 1) % count
 
     print('\nReturning after', trials, 'trials.')
 
